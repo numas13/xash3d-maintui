@@ -1,0 +1,19 @@
+[package]
+name = "xash3d-ratatui"
+version = "0.1.0"
+license.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[features]
+bundled = ["freetype-rs/bundled", "libz-sys/static"]
+
+[dependencies]
+libc.workspace = true
+log.workspace = true
+ratatui.workspace = true
+xash3d-shared.workspace = true
+xash3d-ui.workspace = true
+freetype-rs = "0.38.0"
+libz-sys = "1"

@@ -1,8 +1,11 @@
-use std::ops::{Deref, DerefMut};
+use std::{
+    ops::{Deref, DerefMut},
+    rc::Rc,
+};
 
 use ratatui::{
     prelude::*,
-    widgets::{HighlightSpacing, Row, TableState},
+    widgets::{HighlightSpacing, Row, Table, TableState},
 };
 use xash3d_ratatui::XashBackend;
 
@@ -15,6 +18,38 @@ use crate::{
 };
 
 use super::SelectResult;
+
+pub struct TableHeader {
+    columns: Vec<String>,
+    areas: Rc<[Rect]>,
+}
+
+impl TableHeader {
+    pub fn new<T: ToString>(columns: impl IntoIterator<Item = T>) -> Self {
+        Self {
+            columns: columns.into_iter().map(|i| i.to_string()).collect(),
+            areas: Default::default(),
+        }
+    }
+
+    pub fn create_table(
+        &mut self,
+        mut area: Rect,
+        widths: &[Constraint],
+        header_style: Style,
+    ) -> Table {
+        area.height = 1;
+        self.areas = Layout::horizontal(widths).split(area);
+        let row = Row::new(self.columns.iter().map(String::as_str));
+        Table::default()
+            .header(row.style(header_style))
+            .widths(widths)
+    }
+
+    pub fn contains(&self, position: Position) -> Option<usize> {
+        self.areas.iter().position(|i| i.contains(position))
+    }
+}
 
 pub struct MyTable<T> {
     pub area: Rect,

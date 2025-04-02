@@ -23,7 +23,7 @@ pub use self::password_popup::PasswordPopup;
 pub use self::popup::ConfirmPopup;
 pub use self::scrollbar::Scrollbar;
 pub use self::slider::Slider;
-pub use self::table::MyTable;
+pub use self::table::{MyTable, TableHeader};
 
 use crate::{
     input::KeyEvent,

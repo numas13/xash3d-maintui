@@ -7,7 +7,7 @@ use csz::CStrArray;
 use ratatui::{
     prelude::*,
     style::{Color, Style, Stylize},
-    widgets::{Block, Borders, Cell, Row, Table},
+    widgets::{Block, Borders, Cell, Row},
 };
 use xash3d_protocol::{self as xash3d, color::Color as XashColor};
 use xash3d_ratatui::XashBackend;
@@ -18,7 +18,9 @@ use crate::{
     input::{Key, KeyEvent},
     strings::strings,
     ui::{utils, Control, Menu, Screen, State},
-    widgets::{InputResult, List, ListPopup, MyTable, PasswordPopup, SelectResult, WidgetMut},
+    widgets::{
+        InputResult, List, ListPopup, MyTable, PasswordPopup, SelectResult, TableHeader, WidgetMut,
+    },
 };
 
 use super::create_server::CreateServerMenu;
@@ -141,12 +143,14 @@ pub struct Browser {
     sort_by: SortBy,
     sort_popup: ListPopup,
     password_popup: PasswordPopup,
+    table_header: TableHeader,
     table: MyTable<ServerInfo>,
     tabs_area: [Rect; 2],
 }
 
 impl Browser {
     pub fn new(is_lan: bool) -> Self {
+        let strings = strings();
         let mut menu = List::new_first([MENU_BACK, MENU_CREATE_SERVER, MENU_SORT, MENU_REFRESH]);
         menu.state.select(None);
         menu.set_bindings([
@@ -154,6 +158,14 @@ impl Browser {
             (Key::Char(b'r'), MENU_REFRESH),
             (Key::Char(b'o'), MENU_SORT),
             (Key::Char(b'b'), MENU_BACK),
+        ]);
+
+        let table_header = TableHeader::new([
+            strings.get("#GameUI_ServerName"),
+            strings.get("#GameUI_Map"),
+            "",
+            "Players",
+            "Ping",
         ]);
 
         Self {
@@ -169,6 +181,7 @@ impl Browser {
                 [SORT_PING, SORT_NUMCL, SORT_HOST, SORT_MAP],
             ),
             password_popup: PasswordPopup::new("Password:"),
+            table_header,
             table: MyTable::new_first(),
             tabs_area: [Rect::ZERO; 2],
         }
@@ -238,15 +251,23 @@ impl Browser {
         self.state.select(Focus::SortPopup(focus_table));
     }
 
+    fn set_sort(&mut self, sort_by: SortBy) {
+        self.sort_by = sort_by;
+        self.sorted = false;
+    }
+
     fn sort_item_exec(&mut self, i: usize, focus_table: bool) {
-        self.sort_by = match &self.sort_popup[i] {
+        let sort_by = match &self.sort_popup[i] {
             SORT_PING => SortBy::Ping,
             SORT_NUMCL => SortBy::Numcl,
             SORT_HOST => SortBy::Host,
             SORT_MAP => SortBy::Map,
-            _ => unreachable!(),
+            _ => {
+                debug!("unimplemented sort popup item {i}");
+                return;
+            }
         };
-        self.sorted = false;
+        self.set_sort(sort_by);
         if focus_table {
             self.table.state.select_first();
             self.state.select(Focus::Table);
@@ -285,23 +306,17 @@ impl Browser {
     }
 
     fn draw_table(&mut self, area: Rect, buf: &mut Buffer) {
-        let strings = strings();
-        let header = Row::new([
-            strings.get("#GameUI_ServerName"),
-            strings.get("#GameUI_Map"),
-            "",
-            "Players",
-            "Ping",
-        ]);
-        let table = Table::default()
-            .header(header.style(Style::new().on_dark_gray()))
-            .widths([
-                Constraint::Min(30),
-                Constraint::Length(12),
-                Constraint::Length(3),
-                Constraint::Length(7),
-                Constraint::Max(7),
-            ]);
+        let widths = [
+            Constraint::Min(30),
+            Constraint::Length(12),
+            Constraint::Length(3),
+            Constraint::Length(7),
+            Constraint::Max(7),
+        ];
+        // TODO: hint sorted column
+        let table = self
+            .table_header
+            .create_table(area, &widths, Style::new().on_dark_gray());
 
         let focused = matches!(self.state.focus(), Focus::Table);
         self.table.draw(area, buf, table, focused, |i| {
@@ -324,6 +339,15 @@ impl Browser {
             self.query_servers();
         } else if self.menu.area.contains(cursor) {
             return self.menu_key_event(backend, event);
+        } else if let Some(column) = self.table_header.contains(cursor) {
+            match column {
+                0 => self.set_sort(SortBy::Host),
+                1 => self.set_sort(SortBy::Map),
+                2 => {} // password
+                3 => self.set_sort(SortBy::Numcl),
+                4 => self.set_sort(SortBy::Ping),
+                _ => debug!("unimplemented click to table header {column}"),
+            }
         } else if self.table.area.contains(cursor) {
             return self.table_key_event(backend, event);
         }
@@ -480,6 +504,7 @@ impl Menu for Browser {
         } else if self.menu.mouse_event(backend) {
             self.state.set(Focus::Menu);
             true
+        // TODO: highlight table header
         } else if self.table.mouse_event(backend) {
             self.menu.state.select(None);
             self.state.set(Focus::Table);

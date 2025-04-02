@@ -291,9 +291,10 @@ impl Browser {
         }
     }
 
-    fn query_favorite_servers(&self) {
+    fn query_favorite_servers(&mut self) {
         let engine = engine();
         engine.set_cvar_float(c"cl_nat", 0.0);
+        self.reset_ping();
         for i in &self.favorite_servers {
             engine.client_cmdf(format_args!(
                 "queryserver \"{}\" \"{}\"",

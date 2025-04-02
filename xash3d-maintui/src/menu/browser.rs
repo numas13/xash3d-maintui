@@ -34,7 +34,6 @@ const MENU_BACK: &str = "Back";
 const MENU_CREATE_SERVER: &str = "#GameUI_GameMenu_CreateServer";
 const MENU_REFRESH: &str = "Refresh";
 const MENU_SORT: &str = "Sort";
-// TODO: menu button to switch to favorite servers?
 
 const SORT_PING: &str = "Ping";
 const SORT_NUMCL: &str = "#GameUI_CurrentPlayers";
@@ -189,10 +188,43 @@ enum Focus {
     PasswordPopup(ServerInfo),
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, Default)]
+enum Tab {
+    #[default]
+    Main,
+    Favorite,
+    Nat,
+}
+
+impl Tab {
+    fn prev(&self) -> Tab {
+        match self {
+            Self::Main => Self::Main,
+            Self::Favorite => Self::Main,
+            Self::Nat => Self::Favorite,
+        }
+    }
+
+    fn next(&self) -> Tab {
+        match self {
+            Self::Main => Self::Favorite,
+            Self::Favorite => Self::Nat,
+            Self::Nat => Self::Nat,
+        }
+    }
+
+    fn as_str(&self) -> &str {
+        match self {
+            Self::Main => "Direct",
+            Self::Favorite => "Favorite",
+            Self::Nat => "NAT",
+        }
+    }
+}
+
 pub struct Browser {
     state: State<Focus>,
     is_lan: bool,
-    nat: bool,
     sorted: bool,
     time: Instant,
     menu: List,
@@ -200,9 +232,10 @@ pub struct Browser {
     sort_reverse: bool,
     sort_popup: ListPopup,
     password_popup: PasswordPopup,
+    tab: Tab,
     table_header: TableHeader,
     table: MyTable<ServerInfo>,
-    tabs_area: [Rect; 2],
+    tabs: [(Tab, Rect); 3],
     favorite_servers: HashSet<ServerId>,
 }
 
@@ -236,7 +269,6 @@ impl Browser {
         Self {
             state: State::default(),
             is_lan,
-            nat: false,
             sorted: false,
             time: Instant::now(),
             menu,
@@ -247,10 +279,26 @@ impl Browser {
                 [SORT_PING, SORT_NUMCL, SORT_HOST, SORT_MAP],
             ),
             password_popup: PasswordPopup::new("Password:"),
+            tab: Tab::default(),
             table_header,
             table: MyTable::new_first(),
-            tabs_area: [Rect::ZERO; 2],
+            tabs: [
+                (Tab::Main, Rect::ZERO),
+                (Tab::Favorite, Rect::ZERO),
+                (Tab::Nat, Rect::ZERO),
+            ],
             favorite_servers,
+        }
+    }
+
+    fn query_favorite_servers(&self) {
+        let engine = engine();
+        engine.set_cvar_float(c"cl_nat", 0.0);
+        for i in &self.favorite_servers {
+            engine.client_cmdf(format_args!(
+                "queryserver \"{}\" \"{}\"",
+                i.address, i.protocol
+            ));
         }
     }
 
@@ -260,15 +308,25 @@ impl Browser {
         if self.is_lan {
             engine.client_cmd(c"localservers");
         } else {
-            let nat = if self.nat { 1.0 } else { 0.0 };
-            engine.set_cvar_float(c"cl_nat", nat);
-            engine.client_cmd(c"internetservers");
+            match self.tab {
+                Tab::Main => {
+                    engine.set_cvar_float(c"cl_nat", 0.0);
+                    engine.client_cmd(c"internetservers");
+                }
+                Tab::Nat => {
+                    engine.set_cvar_float(c"cl_nat", 1.0);
+                    engine.client_cmd(c"internetservers");
+                }
+                Tab::Favorite => self.query_favorite_servers(),
+            }
         }
     }
 
-    fn switch_tab(&mut self, nat: bool) {
-        self.nat = nat;
-        self.query_servers();
+    fn switch_tab(&mut self, to: Tab) {
+        if self.tab != to {
+            self.tab = to;
+            self.query_servers();
+        }
     }
 
     fn menu_exec(&mut self, i: usize) -> Control {
@@ -363,23 +421,26 @@ impl Browser {
         self.menu.render(menu_area, buf, screen);
     }
 
-    fn draw_tabs(&mut self, area: Rect, buf: &mut Buffer) {
-        self.tabs_area =
-            Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)])
-                .areas(area);
-
-        for (text, area) in ["Direct", "NAT"].into_iter().zip(self.tabs_area) {
-            let mut style = Style::default().black().on_dark_gray();
-            if (text == "NAT") == self.nat {
-                if matches!(self.state.focus(), Focus::Tabs) {
-                    style = style.on_yellow();
-                } else {
-                    style = style.on_green();
+    fn draw_tabs(&mut self, area: Rect, buf: &mut Buffer, screen: &Screen) {
+        let areas = Layout::horizontal(self.tabs.iter().map(|_| Constraint::Fill(1))).split(area);
+        for (i, area) in areas.iter().enumerate() {
+            self.tabs[i].1 = *area;
+        }
+        for (tab, area) in self.tabs.iter() {
+            let mut style = Style::default().white().on_dark_gray();
+            if matches!(self.state.focus(), Focus::Tabs) {
+                if *tab == self.tab {
+                    style = style.black().on_yellow();
+                } else if area.contains(screen.cursor) {
+                    style = style.black().on_green();
                 }
-            } else {
-                style = style.white();
+            } else if *tab == self.tab {
+                style = style.black().on_green();
             }
-            Line::raw(text).style(style).centered().render(area, buf);
+            Line::raw(tab.as_str())
+                .style(style)
+                .centered()
+                .render(*area, buf);
         }
     }
 
@@ -413,9 +474,8 @@ impl Browser {
 
     fn handle_mouse_click(&mut self, backend: &XashBackend, event: KeyEvent) -> Control {
         let cursor = backend.cursor_position();
-        let index = self.tabs_area.iter().position(|i| i.contains(cursor));
-        if let Some(i) = index {
-            self.nat = i == 1;
+        if let Some((t, _)) = self.tabs.iter().find(|(_, i)| i.contains(cursor)) {
+            self.tab = *t;
             self.query_servers();
         } else if self.menu.area.contains(cursor) {
             return self.menu_key_event(backend, event);
@@ -438,7 +498,9 @@ impl Browser {
     fn menu_key_event(&mut self, backend: &XashBackend, event: KeyEvent) -> Control {
         let key = event.key();
         match key {
-            Key::Tab => self.switch_tab(!self.nat),
+            Key::Tab => {
+                self.tabs_key_event(backend, event);
+            }
             _ => match self.menu.key_event(backend, event) {
                 SelectResult::Ok(i) => return self.menu_exec(i),
                 SelectResult::Down if self.is_lan => {
@@ -468,9 +530,10 @@ impl Browser {
                 self.table.state.select_first();
                 self.state.next(Focus::Table);
             }
-            Key::Tab => self.switch_tab(!self.nat),
-            Key::Char(b'h') | Key::ArrowLeft => self.switch_tab(false),
-            Key::Char(b'l') | Key::ArrowRight => self.switch_tab(true),
+            Key::Tab if event.shift() => self.switch_tab(self.tab.prev()),
+            Key::Tab => self.switch_tab(self.tab.next()),
+            Key::Char(b'h') | Key::ArrowLeft => self.switch_tab(self.tab.prev()),
+            Key::Char(b'l') | Key::ArrowRight => self.switch_tab(self.tab.next()),
             Key::Char(b'q') => return Control::Back,
             Key::Mouse(0) => return self.handle_mouse_click(backend, event),
             _ => {}
@@ -478,21 +541,31 @@ impl Browser {
         Control::None
     }
 
+    fn toggle_favorite(&mut self) {
+        if self.is_lan || matches!(self.tab, Tab::Nat) {
+            return;
+        }
+        let Some(selected) = self.table.state.selected() else {
+            return;
+        };
+        let Some(server) = self.table.items.get_mut(selected) else {
+            return;
+        };
+        if self.favorite_servers.take(&server.id).is_some() {
+            server.favorite = false;
+        } else {
+            server.favorite = true;
+            self.favorite_servers.insert(server.id.clone());
+        }
+    }
+
     fn table_key_event(&mut self, backend: &XashBackend, event: KeyEvent) -> Control {
         let key = event.key();
         match key {
-            Key::Tab => self.switch_tab(!self.nat),
-            Key::Char(b'f') if !self.is_lan => {
-                let selected = self.table.state.selected();
-                if let Some(server) = selected.and_then(|i| self.table.items.get_mut(i)) {
-                    if self.favorite_servers.take(&server.id).is_some() {
-                        server.favorite = false;
-                    } else {
-                        server.favorite = true;
-                        self.favorite_servers.insert(server.id.clone());
-                    }
-                }
+            Key::Tab => {
+                self.tabs_key_event(backend, event);
             }
+            Key::Char(b'f') => self.toggle_favorite(),
             _ => match self.table.key_event(backend, event) {
                 SelectResult::Ok(i) => return self.table_exec(i),
                 SelectResult::Up if self.is_lan => {
@@ -549,7 +622,7 @@ impl Menu for Browser {
             let [tabs_area, table_area] =
                 Layout::vertical([Constraint::Length(1), Constraint::Percentage(100)])
                     .areas(table_area);
-            self.draw_tabs(tabs_area, buf);
+            self.draw_tabs(tabs_area, buf, screen);
             self.draw_table(table_area, buf);
         } else {
             self.draw_table(table_area, buf);
@@ -608,9 +681,9 @@ impl Menu for Browser {
             self.state.set(Focus::Table);
             true
         } else if self
-            .tabs_area
+            .tabs
             .iter()
-            .any(|i| i.contains(backend.cursor_position()))
+            .any(|i| i.1.contains(backend.cursor_position()))
         {
             self.menu.state.select(None);
             self.state.set(Focus::Tabs);
@@ -632,6 +705,9 @@ impl Menu for Browser {
                     return;
                 }
                 info.favorite = self.favorite_servers.contains(&info.id);
+                if self.tab == Tab::Favorite && !info.favorite {
+                    return;
+                }
                 self.table.push(info);
                 self.sorted = false;
                 if matches!(self.state.focus(), Focus::Table) && self.table.len() == 1 {

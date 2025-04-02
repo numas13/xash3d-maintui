@@ -10,6 +10,7 @@ pub struct Screen {
     pub cell: Size,
     /// Alignment offset in pixels.
     pub align: Position,
+    pub cursor: Position,
 }
 
 impl Screen {
@@ -17,6 +18,7 @@ impl Screen {
         Screen {
             cell: backend.cell_size_in_pixels(),
             align: backend.alignment_offset(),
+            cursor: backend.cursor_position(),
         }
     }
 

@@ -1,5 +1,7 @@
 use std::{
+    collections::HashSet,
     fmt::Write,
+    str,
     time::{Duration, Instant},
 };
 
@@ -11,7 +13,7 @@ use ratatui::{
 };
 use xash3d_protocol::{self as xash3d, color::Color as XashColor};
 use xash3d_ratatui::XashBackend;
-use xash3d_shared::raw::netadr_s;
+use xash3d_shared::{parser::Tokens, raw::netadr_s};
 use xash3d_ui::engine;
 
 use crate::{
@@ -25,10 +27,14 @@ use crate::{
 
 use super::create_server::CreateServerMenu;
 
+const FAVORITE_SERVERS_LIST: &str = "favorite_servers.lst";
+// const HISTORY_SERVERS_LIST: &str = "history_servers.lst";
+
 const MENU_BACK: &str = "Back";
 const MENU_CREATE_SERVER: &str = "#GameUI_GameMenu_CreateServer";
 const MENU_REFRESH: &str = "Refresh";
 const MENU_SORT: &str = "Sort";
+// TODO: menu button to switch to favorite servers?
 
 const SORT_PING: &str = "Ping";
 const SORT_NUMCL: &str = "#GameUI_CurrentPlayers";
@@ -44,15 +50,20 @@ enum SortBy {
     Map,
 }
 
+#[derive(Clone, Default, PartialEq, Eq, Hash)]
+struct ServerId {
+    address: String,
+    protocol: u8,
+}
+
 #[derive(Clone, Default)]
 struct ServerInfo {
-    address: String,
+    id: ServerId,
     host: String,
     map: String,
     gamedir: String,
     numcl: u32,
     maxcl: u32,
-    protocol: u8,
     legacy: bool,
     gs: bool,
     dm: bool,
@@ -60,6 +71,7 @@ struct ServerInfo {
     coop: bool,
     password: bool,
     dedicated: bool,
+    favorite: bool,
     ping: Duration,
 }
 
@@ -80,7 +92,7 @@ impl ServerInfo {
         while let Some(key) = it.next() {
             let value = it.next()?;
             match key {
-                "p" => ret.protocol = trim_color(value).parse().unwrap_or_default(),
+                "p" => ret.id.protocol = trim_color(value).parse().unwrap_or_default(),
                 "host" => ret.host = value.trim().to_owned(),
                 "map" => ret.map = trim_color(value).to_string(),
                 "gamedir" => ret.gamedir = trim_color(value).to_string(),
@@ -99,8 +111,12 @@ impl ServerInfo {
                 _ => debug!("unimplemented server info {key}={value}"),
             }
         }
-        ret.address = address.to_owned();
+        ret.id.address = address.to_owned();
         Some(ret)
+    }
+
+    fn address(&self) -> &str {
+        &self.id.address
     }
 
     fn protocol(&self) -> &str {
@@ -114,13 +130,52 @@ impl ServerInfo {
     }
 
     fn connect(&self, password: &str) -> Control {
-        trace!("Ui: connect to {}", self.address);
+        trace!("Ui: connect to {}", self.address());
         let mut cmd = CStrArray::<256>::new();
-        write!(cmd.cursor(), "connect {} {}", self.address, self.protocol()).unwrap();
+        write!(
+            cmd.cursor(),
+            "connect {} {}",
+            self.address(),
+            self.protocol()
+        )
+        .unwrap();
         let engine = engine();
         engine.set_cvar_string(c"password", password);
         engine.client_cmd(&cmd);
         Control::BackMain
+    }
+}
+
+fn load_servers_from_file(path: &str) -> Option<HashSet<ServerId>> {
+    let engine = engine();
+    let file = engine.load_file(path)?;
+    let data = str::from_utf8(file.as_slice()).ok()?;
+    let mut tokens = Tokens::new(data).handle_colon(false);
+    let mut servers = HashSet::new();
+    while let Some((Ok(addr), Ok(protocol))) = tokens.next().zip(tokens.next()) {
+        match protocol.parse() {
+            Ok(protocol) => {
+                servers.insert(ServerId {
+                    address: addr.to_string(),
+                    protocol,
+                });
+            }
+            Err(_) => warn!("invalid protocol {protocol} for server {addr} in {path}"),
+        }
+    }
+    Some(servers)
+}
+
+fn save_servers_to_file<'a>(path: &str, servers: impl Iterator<Item = &'a ServerId>) {
+    let mut out = String::new();
+    for i in servers {
+        writeln!(&mut out, "{} {}", i.address, i.protocol).unwrap();
+    }
+    let engine = engine();
+    if !out.is_empty() {
+        engine.save_file(path, out.as_bytes());
+    } else {
+        engine.remove_file(path);
     }
 }
 
@@ -148,6 +203,7 @@ pub struct Browser {
     table_header: TableHeader,
     table: MyTable<ServerInfo>,
     tabs_area: [Rect; 2],
+    favorite_servers: HashSet<ServerId>,
 }
 
 impl Browser {
@@ -163,12 +219,19 @@ impl Browser {
         ]);
 
         let table_header = TableHeader::new([
+            "",
             strings.get("#GameUI_ServerName"),
             strings.get("#GameUI_Map"),
             "",
             "Players",
             "Ping",
         ]);
+
+        let favorite_servers = if !is_lan {
+            load_servers_from_file(FAVORITE_SERVERS_LIST).unwrap_or_default()
+        } else {
+            Default::default()
+        };
 
         Self {
             state: State::default(),
@@ -187,6 +250,7 @@ impl Browser {
             table_header,
             table: MyTable::new_first(),
             tabs_area: [Rect::ZERO; 2],
+            favorite_servers,
         }
     }
 
@@ -321,6 +385,7 @@ impl Browser {
 
     fn draw_table(&mut self, area: Rect, buf: &mut Buffer) {
         let widths = [
+            Constraint::Length(1),
             Constraint::Min(30),
             Constraint::Length(12),
             Constraint::Length(3),
@@ -335,6 +400,7 @@ impl Browser {
         let focused = matches!(self.state.focus(), Focus::Table);
         self.table.draw(area, buf, table, focused, |i| {
             let cells = [
+                Cell::new(if i.favorite { "*" } else { "" }),
                 Cell::new(colorize(i.host.as_str())),
                 Cell::new(i.map.as_str()),
                 Cell::new(if i.password { "[P]" } else { "" }),
@@ -355,11 +421,12 @@ impl Browser {
             return self.menu_key_event(backend, event);
         } else if let Some(column) = self.table_header.contains(cursor) {
             match column {
-                0 => self.set_sort(SortBy::Host),
-                1 => self.set_sort(SortBy::Map),
-                2 => {} // password
-                3 => self.set_sort(SortBy::Numcl),
-                4 => self.set_sort(SortBy::Ping),
+                0 => {} // favorite
+                1 => self.set_sort(SortBy::Host),
+                2 => self.set_sort(SortBy::Map),
+                3 => {} // password
+                4 => self.set_sort(SortBy::Numcl),
+                5 => self.set_sort(SortBy::Ping),
                 _ => debug!("unimplemented click to table header {column}"),
             }
         } else if self.table.area.contains(cursor) {
@@ -415,6 +482,17 @@ impl Browser {
         let key = event.key();
         match key {
             Key::Tab => self.switch_tab(!self.nat),
+            Key::Char(b'f') if !self.is_lan => {
+                let selected = self.table.state.selected();
+                if let Some(server) = selected.and_then(|i| self.table.items.get_mut(i)) {
+                    if self.favorite_servers.take(&server.id).is_some() {
+                        server.favorite = false;
+                    } else {
+                        server.favorite = true;
+                        self.favorite_servers.insert(server.id.clone());
+                    }
+                }
+            }
             _ => match self.table.key_event(backend, event) {
                 SelectResult::Ok(i) => return self.table_exec(i),
                 SelectResult::Up if self.is_lan => {
@@ -431,6 +509,12 @@ impl Browser {
             },
         }
         Control::None
+    }
+}
+
+impl Drop for Browser {
+    fn drop(&mut self) {
+        save_servers_to_file(FAVORITE_SERVERS_LIST, self.favorite_servers.iter());
     }
 }
 
@@ -543,10 +627,11 @@ impl Menu for Browser {
             return;
         };
         match ServerInfo::from(addr, info, self.time) {
-            Some(info) => {
-                if self.table.iter().any(|i| i.address == addr) {
+            Some(mut info) => {
+                if self.table.iter().any(|i| i.address() == addr) {
                     return;
                 }
+                info.favorite = self.favorite_servers.contains(&info.id);
                 self.table.push(info);
                 self.sorted = false;
                 if matches!(self.state.focus(), Focus::Table) && self.table.len() == 1 {

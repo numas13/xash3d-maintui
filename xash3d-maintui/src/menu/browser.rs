@@ -35,8 +35,9 @@ const SORT_NUMCL: &str = "#GameUI_CurrentPlayers";
 const SORT_HOST: &str = "#GameUI_ServerName";
 const SORT_MAP: &str = "#GameUI_Map";
 
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, Default, PartialEq, Eq)]
 enum SortBy {
+    #[default]
     Ping,
     Numcl,
     Host,
@@ -141,6 +142,7 @@ pub struct Browser {
     time: Instant,
     menu: List,
     sort_by: SortBy,
+    sort_reverse: bool,
     sort_popup: ListPopup,
     password_popup: PasswordPopup,
     table_header: TableHeader,
@@ -175,7 +177,8 @@ impl Browser {
             sorted: false,
             time: Instant::now(),
             menu,
-            sort_by: SortBy::Ping,
+            sort_by: SortBy::default(),
+            sort_reverse: false,
             sort_popup: ListPopup::new(
                 "Select sort column",
                 [SORT_PING, SORT_NUMCL, SORT_HOST, SORT_MAP],
@@ -239,11 +242,17 @@ impl Browser {
     }
 
     fn sort_servers(&mut self) {
-        self.table.sort_by(|a, b| match self.sort_by {
-            SortBy::Ping => a.ping.cmp(&b.ping),
-            SortBy::Numcl => a.numcl.cmp(&b.numcl).reverse(),
-            SortBy::Host => a.host.cmp(&b.host),
-            SortBy::Map => a.map.cmp(&b.map),
+        self.table.sort_by(|a, b| {
+            let o = match self.sort_by {
+                SortBy::Ping => a.ping.cmp(&b.ping),
+                SortBy::Numcl => a.numcl.cmp(&b.numcl).reverse(),
+                SortBy::Host => a.host.cmp(&b.host),
+                SortBy::Map => a.map.cmp(&b.map),
+            };
+            match self.sort_reverse {
+                false => o,
+                true => o.reverse(),
+            }
         });
     }
 
@@ -252,7 +261,12 @@ impl Browser {
     }
 
     fn set_sort(&mut self, sort_by: SortBy) {
-        self.sort_by = sort_by;
+        if self.sort_by == sort_by {
+            self.sort_reverse = !self.sort_reverse;
+        } else {
+            self.sort_reverse = false;
+            self.sort_by = sort_by;
+        }
         self.sorted = false;
     }
 

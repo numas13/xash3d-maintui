@@ -1,5 +1,4 @@
 use std::{
-    collections::HashSet,
     fmt::Write,
     str,
     time::{Duration, Instant},
@@ -21,17 +20,20 @@ use crate::{
     strings::strings,
     ui::{utils, Control, Menu, Screen, State},
     widgets::{
-        InputResult, List, ListPopup, MyTable, PasswordPopup, SelectResult, TableHeader, WidgetMut,
+        InputPopup, InputResult, List, ListPopup, MyTable, SelectResult, TableHeader, WidgetMut,
     },
 };
 
 use super::create_server::CreateServerMenu;
+
+const DEFAULT_PORT: u16 = 27015;
 
 const FAVORITE_SERVERS_LIST: &str = "favorite_servers.lst";
 // const HISTORY_SERVERS_LIST: &str = "history_servers.lst";
 
 const MENU_BACK: &str = "Back";
 const MENU_CREATE_SERVER: &str = "#GameUI_GameMenu_CreateServer";
+const MENU_ADD_FAVORITE: &str = "Add favorite server";
 const MENU_REFRESH: &str = "Refresh";
 const MENU_SORT: &str = "Sort";
 
@@ -39,6 +41,11 @@ const SORT_PING: &str = "Ping";
 const SORT_NUMCL: &str = "#GameUI_CurrentPlayers";
 const SORT_HOST: &str = "#GameUI_ServerName";
 const SORT_MAP: &str = "#GameUI_Map";
+
+const PROTOCOL_CANCEL: &str = "Cancel";
+const PROTOCOL_XASH3D_49: &str = "Xash3D 49 (new)";
+const PROTOCOL_XASH3D_48: &str = "Xash3D 48 (old)";
+const PROTOCOL_GOLD_SOURCE_48: &str = "GoldSource 48";
 
 #[derive(Copy, Clone, Default, PartialEq, Eq)]
 enum SortBy {
@@ -49,15 +56,9 @@ enum SortBy {
     Map,
 }
 
-#[derive(Clone, Default, PartialEq, Eq, Hash)]
-struct ServerId {
-    address: String,
-    protocol: u8,
-}
-
-#[derive(Clone, Default)]
+#[derive(Clone)]
 struct ServerInfo {
-    id: ServerId,
+    addr: netadr_s,
     host: String,
     map: String,
     gamedir: String,
@@ -71,27 +72,47 @@ struct ServerInfo {
     password: bool,
     dedicated: bool,
     favorite: bool,
+    protocol: u8,
     ping: Duration,
 }
 
 impl ServerInfo {
-    fn from(address: &str, info: &str, start: Instant) -> Option<Self> {
+    // XXX: netadr_s does not implement Default trait...
+    fn new(addr: netadr_s) -> Self {
+        Self {
+            addr,
+            host: String::new(),
+            map: String::new(),
+            gamedir: String::new(),
+            numcl: 0,
+            maxcl: 0,
+            legacy: false,
+            gs: false,
+            dm: false,
+            team: false,
+            coop: false,
+            password: false,
+            dedicated: false,
+            favorite: false,
+            protocol: 0,
+            ping: Duration::default(),
+        }
+    }
+
+    fn from(addr: netadr_s, info: &str, start: Instant) -> Option<Self> {
         use xash3d::color::trim_color;
 
         if !info.starts_with("\\") {
             return None;
         }
 
-        let mut ret = Self {
-            ping: start.elapsed(),
-            ..Self::default()
-        };
-
+        let mut ret = Self::new(addr);
+        ret.ping = start.elapsed();
         let mut it = info[1..].split('\\');
         while let Some(key) = it.next() {
             let value = it.next()?;
             match key {
-                "p" => ret.id.protocol = trim_color(value).parse().unwrap_or_default(),
+                "p" => ret.protocol = trim_color(value).parse().unwrap_or_default(),
                 "host" => ret.host = value.trim().to_owned(),
                 "map" => ret.map = trim_color(value).to_string(),
                 "gamedir" => ret.gamedir = trim_color(value).to_string(),
@@ -110,12 +131,7 @@ impl ServerInfo {
                 _ => debug!("unimplemented server info {key}={value}"),
             }
         }
-        ret.id.address = address.to_owned();
         Some(ret)
-    }
-
-    fn address(&self) -> &str {
-        &self.id.address
     }
 
     fn protocol(&self) -> &str {
@@ -129,48 +145,85 @@ impl ServerInfo {
     }
 
     fn connect(&self, password: &str) -> Control {
-        trace!("Ui: connect to {}", self.address());
-        let mut cmd = CStrArray::<256>::new();
-        write!(
-            cmd.cursor(),
-            "connect {} {}",
-            self.address(),
-            self.protocol()
-        )
-        .unwrap();
         let engine = engine();
+        let address = engine.addr_to_string(self.addr);
+        trace!("Ui: connect to {address}");
+        let mut cmd = CStrArray::<256>::new();
+        write!(cmd.cursor(), "connect {address} {}", self.protocol()).unwrap();
         engine.set_cvar_string(c"password", password);
         engine.client_cmd(&cmd);
         Control::BackMain
     }
 }
 
-fn load_servers_from_file(path: &str) -> Option<HashSet<ServerId>> {
+struct FavoriteServer {
+    addr: netadr_s,
+    // FIXME: replace with enum
+    protocol: String,
+}
+
+impl FavoriteServer {
+    fn new(addr: netadr_s, protocol: &str) -> Self {
+        Self {
+            addr,
+            protocol: protocol.to_string(),
+        }
+    }
+
+    fn query_info(&self) {
+        let address = engine().addr_to_string(self.addr);
+        engine().client_cmdf(format_args!(
+            "queryserver \"{address}\" \"{}\"",
+            self.protocol
+        ));
+    }
+
+    fn fake_server_info(&self) -> ServerInfo {
+        ServerInfo {
+            host: engine().addr_to_string(self.addr).to_string(),
+            legacy: self.protocol == "48",
+            gs: self.protocol == "gs",
+            protocol: match self.protocol.as_str() {
+                "49" => 49,
+                "48" | "legacy" => 48,
+                "gs" | "goldsrc" => 48,
+                _ => 0,
+            },
+            ping: Duration::from_millis(999),
+            favorite: true,
+            ..ServerInfo::new(self.addr)
+        }
+    }
+}
+
+fn load_servers_from_file(path: &str) -> Option<Vec<FavoriteServer>> {
     let engine = engine();
     let file = engine.load_file(path)?;
     let data = str::from_utf8(file.as_slice()).ok()?;
     let mut tokens = Tokens::new(data).handle_colon(false);
-    let mut servers = HashSet::new();
+    let mut servers = Vec::<FavoriteServer>::new();
     while let Some((Ok(addr), Ok(protocol))) = tokens.next().zip(tokens.next()) {
-        match protocol.parse() {
-            Ok(protocol) => {
-                servers.insert(ServerId {
-                    address: addr.to_string(),
-                    protocol,
-                });
-            }
-            Err(_) => warn!("invalid protocol {protocol} for server {addr} in {path}"),
+        let Some(addr) = engine.string_to_addr(addr) else {
+            warn!("invalid address {addr:?} in {path}");
+            continue;
+        };
+        if !servers.iter().any(|i| engine.compare_addr(&i.addr, &addr)) {
+            servers.push(FavoriteServer {
+                addr,
+                protocol: protocol.to_string(),
+            });
         }
     }
     Some(servers)
 }
 
-fn save_servers_to_file<'a>(path: &str, servers: impl Iterator<Item = &'a ServerId>) {
+fn save_servers_to_file<'a>(path: &str, servers: impl Iterator<Item = &'a FavoriteServer>) {
+    let engine = engine();
     let mut out = String::new();
     for i in servers {
-        writeln!(&mut out, "{} {}", i.address, i.protocol).unwrap();
+        let address = engine.addr_to_string(i.addr);
+        writeln!(&mut out, "{address} {}", i.protocol).unwrap();
     }
-    let engine = engine();
     if !out.is_empty() {
         engine.save_file(path, out.as_bytes());
     } else {
@@ -186,12 +239,13 @@ enum Focus {
     Table,
     SortPopup(bool),
     PasswordPopup(ServerInfo),
+    AddFavoriteServer(Option<netadr_s>),
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Default)]
 enum Tab {
     #[default]
-    Main,
+    Direct,
     Favorite,
     Nat,
 }
@@ -199,15 +253,15 @@ enum Tab {
 impl Tab {
     fn prev(&self) -> Tab {
         match self {
-            Self::Main => Self::Main,
-            Self::Favorite => Self::Main,
+            Self::Direct => Self::Direct,
+            Self::Favorite => Self::Direct,
             Self::Nat => Self::Favorite,
         }
     }
 
     fn next(&self) -> Tab {
         match self {
-            Self::Main => Self::Favorite,
+            Self::Direct => Self::Favorite,
             Self::Favorite => Self::Nat,
             Self::Nat => Self::Nat,
         }
@@ -215,7 +269,7 @@ impl Tab {
 
     fn as_str(&self) -> &str {
         match self {
-            Self::Main => "Direct",
+            Self::Direct => "Direct",
             Self::Favorite => "Favorite",
             Self::Nat => "NAT",
         }
@@ -231,20 +285,34 @@ pub struct Browser {
     sort_by: SortBy,
     sort_reverse: bool,
     sort_popup: ListPopup,
-    password_popup: PasswordPopup,
+    password_popup: InputPopup,
     tab: Tab,
     table_header: TableHeader,
     table: MyTable<ServerInfo>,
     tabs: [(Tab, Rect); 3],
-    favorite_servers: HashSet<ServerId>,
+    favorite_servers: Vec<FavoriteServer>,
+    address_popup: InputPopup,
+    protocol_popup: ListPopup,
 }
 
 impl Browser {
     pub fn new(is_lan: bool) -> Self {
         let strings = strings();
-        let mut menu = List::new_first([MENU_BACK, MENU_CREATE_SERVER, MENU_SORT, MENU_REFRESH]);
+        let items = if is_lan {
+            &[MENU_BACK, MENU_CREATE_SERVER, MENU_SORT, MENU_REFRESH][..]
+        } else {
+            &[
+                MENU_BACK,
+                MENU_CREATE_SERVER,
+                MENU_ADD_FAVORITE,
+                MENU_SORT,
+                MENU_REFRESH,
+            ][..]
+        };
+        let mut menu = List::new_first(items);
         menu.state.select(None);
         menu.set_bindings([
+            (Key::Char(b'a'), MENU_ADD_FAVORITE),
             (Key::Char(b'c'), MENU_CREATE_SERVER),
             (Key::Char(b'r'), MENU_REFRESH),
             (Key::Char(b'o'), MENU_SORT),
@@ -278,48 +346,46 @@ impl Browser {
                 "Select sort column",
                 [SORT_PING, SORT_NUMCL, SORT_HOST, SORT_MAP],
             ),
-            password_popup: PasswordPopup::new("Password:"),
+            password_popup: InputPopup::new_password("Password:"),
             tab: Tab::default(),
             table_header,
             table: MyTable::new_first(),
             tabs: [
-                (Tab::Main, Rect::ZERO),
+                (Tab::Direct, Rect::ZERO),
                 (Tab::Favorite, Rect::ZERO),
                 (Tab::Nat, Rect::ZERO),
             ],
             favorite_servers,
+            address_popup: InputPopup::new_text("Address:"),
+            protocol_popup: ListPopup::new(
+                "Select protocol",
+                [
+                    PROTOCOL_CANCEL,
+                    PROTOCOL_XASH3D_49,
+                    PROTOCOL_XASH3D_48,
+                    PROTOCOL_GOLD_SOURCE_48,
+                ],
+            ),
         }
     }
 
     fn query_favorite_servers(&mut self) {
-        let engine = engine();
-        engine.set_cvar_float(c"cl_nat", 0.0);
-        self.reset_ping();
         for i in &self.favorite_servers {
-            engine.client_cmdf(format_args!(
-                "queryserver \"{}\" \"{}\"",
-                i.address, i.protocol
-            ));
+            i.query_info();
+            self.table.push(i.fake_server_info());
         }
+        self.reset_ping();
     }
 
     fn query_servers(&mut self) {
         self.table.clear();
         let engine = engine();
-        if self.is_lan {
-            engine.client_cmd(c"localservers");
-        } else {
-            match self.tab {
-                Tab::Main => {
-                    engine.set_cvar_float(c"cl_nat", 0.0);
-                    engine.client_cmd(c"internetservers");
-                }
-                Tab::Nat => {
-                    engine.set_cvar_float(c"cl_nat", 1.0);
-                    engine.client_cmd(c"internetservers");
-                }
-                Tab::Favorite => self.query_favorite_servers(),
-            }
+        engine.set_cvar_float(c"cl_nat", if self.tab == Tab::Nat { 1.0 } else { 0.0 });
+        match self.tab {
+            Tab::Direct if self.is_lan => engine.client_cmd(c"localservers"),
+            Tab::Direct => engine.client_cmd(c"internetservers"),
+            Tab::Nat => engine.client_cmd(c"internetservers"),
+            Tab::Favorite => self.query_favorite_servers(),
         }
     }
 
@@ -335,22 +401,20 @@ impl Browser {
             MENU_CREATE_SERVER => {
                 let public = if self.is_lan { 0.0 } else { 1.0 };
                 engine().set_cvar_float(c"public", public);
-                Control::next(CreateServerMenu::new())
+                return Control::next(CreateServerMenu::new());
             }
-            MENU_REFRESH => {
-                self.query_servers();
-                Control::None
+            MENU_ADD_FAVORITE => {
+                self.address_popup.clear();
+                self.state.select(Focus::AddFavoriteServer(None));
             }
-            MENU_SORT => {
-                self.show_sort_popup(matches!(self.state.focus(), Focus::Table));
-                Control::None
-            }
-            MENU_BACK => Control::Back,
+            MENU_REFRESH => self.query_servers(),
+            MENU_SORT => self.show_sort_popup(matches!(self.state.focus(), Focus::Table)),
+            MENU_BACK => return Control::Back,
             item => {
-                warn!("{item} is not implemented yet");
-                Control::None
+                warn!("{item} is not implemented yet")
             }
         }
+        Control::None
     }
 
     fn table_exec(&mut self, i: usize) -> Control {
@@ -362,6 +426,65 @@ impl Browser {
             return Control::GrabInput(true);
         }
         server.connect("")
+    }
+
+    fn is_favorite(&self, addr: &netadr_s) -> bool {
+        let engine = engine();
+        self.favorite_servers
+            .iter()
+            .any(|i| engine.compare_addr(&i.addr, addr))
+    }
+
+    fn add_favorite(&mut self, addr: netadr_s, protocol: &str) -> bool {
+        let engine = engine();
+        let address = engine.addr_to_string(addr).to_string();
+        trace!("Add server to favorite list {address:?} {protocol:?}");
+        if !self
+            .favorite_servers
+            .iter()
+            .any(|i| engine.compare_addr(&i.addr, &addr))
+        {
+            if let Some(server) = self
+                .table
+                .items
+                .iter_mut()
+                .find(|i| engine.compare_addr(&i.addr, &addr))
+            {
+                server.favorite = true;
+            }
+            let server = FavoriteServer::new(addr, protocol);
+            if self.tab == Tab::Favorite {
+                // FIXME: track ping for each server
+                self.reset_ping();
+                server.query_info();
+                self.table.push(server.fake_server_info());
+            }
+            self.favorite_servers.push(server);
+            true
+        } else {
+            false
+        }
+    }
+
+    fn protocol_popup_exec(&mut self, addr: netadr_s, i: usize) {
+        let protocol = match &self.protocol_popup[i] {
+            PROTOCOL_CANCEL => {
+                self.state.cancel_default();
+                return;
+            }
+            PROTOCOL_XASH3D_49 => "49",
+            PROTOCOL_XASH3D_48 => "48",
+            PROTOCOL_GOLD_SOURCE_48 => "gs",
+            item => {
+                warn!("{item} is not implemented yet");
+                return;
+            }
+        };
+        if self.add_favorite(addr, protocol) {
+            self.state.confirm_default();
+        } else {
+            self.state.deny_default();
+        }
     }
 
     fn sort_servers(&mut self) {
@@ -521,6 +644,9 @@ impl Browser {
     }
 
     fn tabs_key_event(&mut self, backend: &XashBackend, event: KeyEvent) -> Control {
+        if self.is_lan {
+            return Control::None;
+        }
         let key = event.key();
         match key {
             _ if key.is_prev() => {
@@ -552,18 +678,26 @@ impl Browser {
         let Some(server) = self.table.items.get_mut(selected) else {
             return;
         };
-        if self.favorite_servers.take(&server.id).is_some() {
+        let engine = engine();
+        if let Some(i) = self
+            .favorite_servers
+            .iter()
+            .position(|i| engine.compare_addr(&i.addr, &server.addr))
+        {
             server.favorite = false;
+            self.favorite_servers.remove(i);
         } else {
             server.favorite = true;
-            self.favorite_servers.insert(server.id.clone());
+            let favorite = FavoriteServer::new(server.addr, server.protocol());
+            self.favorite_servers.push(favorite);
         }
     }
 
     fn table_key_event(&mut self, backend: &XashBackend, event: KeyEvent) -> Control {
         let key = event.key();
         match key {
-            Key::Tab => {
+            Key::Char(b'h') | Key::ArrowLeft if self.tab == Tab::Direct => return Control::Back,
+            Key::Tab | Key::Char(b'h' | b'l') | Key::ArrowLeft | Key::ArrowRight => {
                 self.tabs_key_event(backend, event);
             }
             Key::Char(b'f') => self.toggle_favorite(),
@@ -632,6 +766,8 @@ impl Menu for Browser {
         match self.state.focus() {
             Focus::SortPopup(_) => self.sort_popup.render(area, buf, screen),
             Focus::PasswordPopup(_) => self.password_popup.render(area, buf, screen),
+            Focus::AddFavoriteServer(None) => self.address_popup.render(area, buf, screen),
+            Focus::AddFavoriteServer(Some(_)) => self.protocol_popup.render(area, buf, screen),
             _ => {}
         }
     }
@@ -646,76 +782,112 @@ impl Menu for Browser {
             }
         }
         match self.state.focus() {
-            Focus::Menu => self.menu_key_event(backend, event),
-            Focus::Tabs => self.tabs_key_event(backend, event),
-            Focus::Table => self.table_key_event(backend, event),
-            Focus::SortPopup(focus_table) => {
-                match self.sort_popup.key_event(backend, event) {
-                    SelectResult::Cancel => self.state.select(Focus::Table),
-                    SelectResult::Ok(i) => self.sort_item_exec(i, *focus_table),
+            Focus::Menu => return self.menu_key_event(backend, event),
+            Focus::Tabs => return self.tabs_key_event(backend, event),
+            Focus::Table => return self.table_key_event(backend, event),
+            Focus::AddFavoriteServer(None) => match self.address_popup.key_event(backend, event) {
+                InputResult::Ok(address) => match engine().string_to_addr(address.as_str()) {
+                    Some(mut addr) => {
+                        if addr.port == 0 {
+                            addr.port = DEFAULT_PORT.to_be();
+                        }
+                        self.state.confirm(Focus::AddFavoriteServer(Some(addr)));
+                        self.protocol_popup.state.select(Some(1));
+                    }
+                    None => {
+                        // TODO: print error message
+                        error!("invalid server address {address:?}");
+                        self.state.deny_default();
+                    }
+                },
+                InputResult::Cancel => self.state.cancel_default(),
+                _ => {}
+            },
+            Focus::AddFavoriteServer(Some(address)) => {
+                match self.protocol_popup.key_event(backend, event) {
+                    SelectResult::Ok(i) => self.protocol_popup_exec(*address, i),
+                    SelectResult::Cancel => self.state.cancel_default(),
                     _ => {}
                 }
-                Control::None
             }
+            Focus::SortPopup(focus_table) => match self.sort_popup.key_event(backend, event) {
+                SelectResult::Cancel => self.state.select(Focus::Table),
+                SelectResult::Ok(i) => self.sort_item_exec(i, *focus_table),
+                _ => {}
+            },
             Focus::PasswordPopup(server) => match self.password_popup.key_event(backend, event) {
-                InputResult::Ok(password) => server.connect(&password),
+                InputResult::Ok(password) => return server.connect(&password),
                 InputResult::Cancel => {
                     self.state.cancel_default();
-                    Control::GrabInput(false)
+                    return Control::GrabInput(false);
                 }
-                _ => Control::None,
+                _ => {}
             },
         }
+        Control::None
     }
 
     fn mouse_event(&mut self, backend: &XashBackend) -> bool {
-        if let Focus::SortPopup(_) = self.state.focus() {
-            self.sort_popup.mouse_event(backend)
-        } else if let Focus::PasswordPopup(_) = self.state.focus() {
-            self.password_popup.mouse_event(backend)
-        } else if self.menu.mouse_event(backend) {
-            self.state.set(Focus::Menu);
-            true
-        // TODO: highlight table header
-        } else if self.table.mouse_event(backend) {
-            self.menu.state.select(None);
-            self.state.set(Focus::Table);
-            true
-        } else if self
-            .tabs
-            .iter()
-            .any(|i| i.1.contains(backend.cursor_position()))
-        {
-            self.menu.state.select(None);
-            self.state.set(Focus::Tabs);
-            true
-        } else {
-            false
+        match self.state.focus() {
+            Focus::SortPopup(_) => self.sort_popup.mouse_event(backend),
+            Focus::PasswordPopup(_) => self.password_popup.mouse_event(backend),
+            Focus::AddFavoriteServer(None) => self.address_popup.mouse_event(backend),
+            Focus::AddFavoriteServer(Some(_)) => self.protocol_popup.mouse_event(backend),
+            _ => {
+                if self.menu.mouse_event(backend) {
+                    self.state.set(Focus::Menu);
+                    true
+                // TODO: highlight table header
+                } else if self.table.mouse_event(backend) {
+                    self.menu.state.select(None);
+                    self.state.set(Focus::Table);
+                    true
+                } else if self
+                    .tabs
+                    .iter()
+                    .any(|i| i.1.contains(backend.cursor_position()))
+                {
+                    self.menu.state.select(None);
+                    self.state.set(Focus::Tabs);
+                    true
+                } else {
+                    false
+                }
+            }
         }
     }
 
     fn add_server_to_list(&mut self, addr: netadr_s, info: &str) {
-        let addr = engine().addr_to_string(addr);
-        let Ok(addr) = addr.to_str() else {
-            error!("invalid server address: {addr}");
-            return;
-        };
+        let engine = engine();
         match ServerInfo::from(addr, info, self.time) {
             Some(mut info) => {
-                if self.table.iter().any(|i| i.address() == addr) {
-                    return;
+                if let Some(i) = self
+                    .table
+                    .iter_mut()
+                    .find(|i| engine.compare_addr(&i.addr, &addr))
+                {
+                    *i = ServerInfo {
+                        favorite: i.favorite,
+                        ..info
+                    };
+                    self.sorted = false;
+                } else {
+                    if !self.is_lan && self.tab != Tab::Nat {
+                        info.favorite = self.is_favorite(&addr);
+                    }
+                    if self.tab != Tab::Favorite || info.favorite {
+                        self.table.push(info);
+                        self.sorted = false;
+                    }
                 }
-                info.favorite = self.favorite_servers.contains(&info.id);
-                if self.tab == Tab::Favorite && !info.favorite {
-                    return;
-                }
-                self.table.push(info);
-                self.sorted = false;
                 if matches!(self.state.focus(), Focus::Table) && self.table.len() == 1 {
                     self.table.state.select_first();
                 }
             }
-            None => trace!("failed to add server {addr} with info {info}"),
+            None => {
+                let address = engine.addr_to_string(addr);
+                trace!("failed to add server {address} with info {info}");
+            }
         }
     }
 

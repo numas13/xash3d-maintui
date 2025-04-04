@@ -93,6 +93,11 @@ impl Input {
         self.value.insert(self.cursor_to_offset(), c);
         self.cursor += 1;
     }
+
+    pub fn clear(&mut self) {
+        self.value.clear();
+        self.cursor = 0;
+    }
 }
 
 impl WidgetMut<ConfirmResult> for Input {
@@ -189,6 +194,7 @@ impl WidgetMut<ConfirmResult> for Input {
                         b'.' => b'>',
                         b'/' => b'?',
                         b'`' => b'~',
+                        b';' => b':',
                         _ => c,
                     },
                     _ => c,

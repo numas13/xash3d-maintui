@@ -14,7 +14,7 @@ enum Focus {
     Yes,
 }
 
-pub struct PasswordPopup {
+pub struct InputPopup {
     state: State<Focus>,
     title: String,
     input: Input,
@@ -22,19 +22,31 @@ pub struct PasswordPopup {
     yes: Button,
 }
 
-impl PasswordPopup {
-    pub fn new(title: impl ToString) -> Self {
+impl InputPopup {
+    pub fn new(title: impl ToString, input: Input) -> Self {
         Self {
             state: Default::default(),
             title: title.to_string(),
-            input: Input::builder().password().build(),
+            input,
             cancel: Button::cancel(),
             yes: Button::yes(),
         }
     }
+
+    pub fn new_text(title: impl ToString) -> Self {
+        Self::new(title, Input::builder().build())
+    }
+
+    pub fn new_password(title: impl ToString) -> Self {
+        Self::new(title, Input::builder().password().build())
+    }
+
+    pub fn clear(&mut self) {
+        self.input.clear();
+    }
 }
 
-impl WidgetMut<InputResult> for PasswordPopup {
+impl WidgetMut<InputResult> for InputPopup {
     fn render(&mut self, area: Rect, buf: &mut Buffer, screen: &Screen) {
         let area = utils::centered_rect_fixed(32, 4, area);
         let block = utils::popup_block(&self.title);

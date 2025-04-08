@@ -19,9 +19,7 @@ use crate::{
     input::{Key, KeyEvent},
     strings::strings,
     ui::{utils, Control, Menu, Screen, State},
-    widgets::{
-        InputPopup, InputResult, List, ListPopup, MyTable, SelectResult, TableHeader, WidgetMut,
-    },
+    widgets::{InputPopup, InputResult, List, ListPopup, MyTable, SelectResult, WidgetMut},
 };
 
 use super::create_server::CreateServerMenu;
@@ -60,6 +58,7 @@ enum SortBy {
 struct ServerInfo {
     addr: netadr_s,
     host: String,
+    host_cmp: String,
     map: String,
     gamedir: String,
     numcl: u32,
@@ -72,6 +71,7 @@ struct ServerInfo {
     password: bool,
     dedicated: bool,
     favorite: bool,
+    fake: bool,
     protocol: u8,
     ping: Duration,
 }
@@ -82,6 +82,7 @@ impl ServerInfo {
         Self {
             addr,
             host: String::new(),
+            host_cmp: String::new(),
             map: String::new(),
             gamedir: String::new(),
             numcl: 0,
@@ -94,6 +95,7 @@ impl ServerInfo {
             password: false,
             dedicated: false,
             favorite: false,
+            fake: false,
             protocol: 0,
             ping: Duration::default(),
         }
@@ -131,6 +133,7 @@ impl ServerInfo {
                 _ => debug!("unimplemented server info {key}={value}"),
             }
         }
+        ret.host_cmp = xash3d_protocol::color::trim_color(&ret.host).to_lowercase();
         Some(ret)
     }
 
@@ -189,8 +192,9 @@ impl FavoriteServer {
                 "gs" | "goldsrc" => 48,
                 _ => 0,
             },
-            ping: Duration::from_millis(999),
+            ping: Duration::from_secs(999),
             favorite: true,
+            fake: true,
             ..ServerInfo::new(self.addr)
         }
     }
@@ -287,7 +291,6 @@ pub struct Browser {
     sort_popup: ListPopup,
     password_popup: InputPopup,
     tab: Tab,
-    table_header: TableHeader,
     table: MyTable<ServerInfo>,
     tabs: [(Tab, Rect); 3],
     favorite_servers: Vec<FavoriteServer>,
@@ -297,7 +300,6 @@ pub struct Browser {
 
 impl Browser {
     pub fn new(is_lan: bool) -> Self {
-        let strings = strings();
         let items = if is_lan {
             &[MENU_BACK, MENU_CREATE_SERVER, MENU_SORT, MENU_REFRESH][..]
         } else {
@@ -317,15 +319,6 @@ impl Browser {
             (Key::Char(b'r'), MENU_REFRESH),
             (Key::Char(b'o'), MENU_SORT),
             (Key::Char(b'b'), MENU_BACK),
-        ]);
-
-        let table_header = TableHeader::new([
-            "",
-            strings.get("#GameUI_ServerName"),
-            strings.get("#GameUI_Map"),
-            "",
-            "Players",
-            "Ping",
         ]);
 
         let favorite_servers = if !is_lan {
@@ -348,7 +341,6 @@ impl Browser {
             ),
             password_popup: InputPopup::new_password("Password:"),
             tab: Tab::default(),
-            table_header,
             table: MyTable::new_first(),
             tabs: [
                 (Tab::Direct, Rect::ZERO),
@@ -492,7 +484,7 @@ impl Browser {
             let o = match self.sort_by {
                 SortBy::Ping => a.ping.cmp(&b.ping),
                 SortBy::Numcl => a.numcl.cmp(&b.numcl).reverse(),
-                SortBy::Host => a.host.cmp(&b.host),
+                SortBy::Host => a.host_cmp.cmp(&b.host_cmp),
                 SortBy::Map => a.map.cmp(&b.map),
             };
             match self.sort_reverse {
@@ -577,10 +569,26 @@ impl Browser {
             Constraint::Length(7),
             Constraint::Max(7),
         ];
-        // TODO: hint sorted column
+        let sort_hint = |s, e: SortBy| {
+            if self.sort_by == e {
+                let p = if self.sort_reverse { "↑" } else { "↓" };
+                Cell::new(Line::from_iter([p, s]))
+            } else {
+                Cell::new(s)
+            }
+        };
+        let strings = strings();
+        let header = Row::new([
+            Cell::new(""),
+            sort_hint(strings.get("#GameUI_ServerName"), SortBy::Host),
+            sort_hint(strings.get("#GameUI_Map"), SortBy::Map),
+            Cell::new(""),
+            sort_hint("Players", SortBy::Numcl),
+            sort_hint("Ping", SortBy::Ping),
+        ]);
         let table = self
-            .table_header
-            .create_table(area, &widths, Style::new().on_dark_gray());
+            .table
+            .create_table(area, header.style(Style::new().on_black()), &widths);
 
         let focused = matches!(self.state.focus(), Focus::Table);
         self.table.draw(area, buf, table, focused, |i| {
@@ -592,7 +600,12 @@ impl Browser {
                 Cell::new(Span::from(format!("{}/{}", i.numcl, i.maxcl)).into_centered_line()),
                 Cell::new(format!("{:.0?}", i.ping)),
             ];
-            Some(Row::new(cells))
+            let row = Row::new(cells);
+            if i.fake {
+                Some(row.style(Style::new().dark_gray()))
+            } else {
+                Some(row)
+            }
         });
     }
 
@@ -603,7 +616,7 @@ impl Browser {
             self.query_servers();
         } else if self.menu.area.contains(cursor) {
             return self.menu_key_event(backend, event);
-        } else if let Some(column) = self.table_header.contains(cursor) {
+        } else if let Some(column) = self.table.cursor_to_header_column(cursor) {
             match column {
                 0 => {} // favorite
                 1 => self.set_sort(SortBy::Host),
@@ -861,6 +874,7 @@ impl Menu for Browser {
         let engine = engine();
         match ServerInfo::from(addr, info, self.time) {
             Some(mut info) => {
+                info.fake = false;
                 if let Some(i) = self
                     .table
                     .iter_mut()

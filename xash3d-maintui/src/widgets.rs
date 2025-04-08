@@ -23,7 +23,7 @@ pub use self::list_popup::ListPopup;
 pub use self::popup::ConfirmPopup;
 pub use self::scrollbar::Scrollbar;
 pub use self::slider::Slider;
-pub use self::table::{MyTable, TableHeader};
+pub use self::table::MyTable;
 
 use crate::{
     input::KeyEvent,

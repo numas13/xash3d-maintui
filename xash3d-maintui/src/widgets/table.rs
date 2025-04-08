@@ -19,61 +19,48 @@ use crate::{
 
 use super::SelectResult;
 
-pub struct TableHeader {
-    columns: Vec<String>,
-    areas: Rc<[Rect]>,
-}
-
-impl TableHeader {
-    pub fn new<T: ToString>(columns: impl IntoIterator<Item = T>) -> Self {
-        Self {
-            columns: columns.into_iter().map(|i| i.to_string()).collect(),
-            areas: Default::default(),
-        }
-    }
-
-    pub fn create_table(
-        &mut self,
-        mut area: Rect,
-        widths: &[Constraint],
-        header_style: Style,
-    ) -> Table {
-        area.height = 1;
-        self.areas = Layout::horizontal(widths).split(area);
-        let row = Row::new(self.columns.iter().map(String::as_str));
-        Table::default()
-            .header(row.style(header_style))
-            .widths(widths)
-    }
-
-    pub fn contains(&self, position: Position) -> Option<usize> {
-        self.areas.iter().position(|i| i.contains(position))
-    }
-}
-
 pub struct MyTable<T> {
     pub area: Rect,
+    pub header_areas: Rc<[Rect]>,
     pub state: TableState,
     pub items: Vec<T>,
 }
 
 impl<T> MyTable<T> {
     pub fn new() -> Self {
-        Self {
-            area: Rect::ZERO,
-            state: TableState::new(),
-            items: Default::default(),
-        }
+        Self::with_state(TableState::new())
     }
 
     pub fn new_first() -> Self {
         let mut state = TableState::new();
         state.select(Some(0));
+        Self::with_state(state)
+    }
+
+    pub fn with_state(state: TableState) -> Self {
         Self {
             area: Rect::ZERO,
+            header_areas: Default::default(),
             state,
             items: Default::default(),
         }
+    }
+
+    pub fn create_table<'a>(
+        &mut self,
+        mut area: Rect,
+        header: Row<'a>,
+        widths: &[Constraint],
+    ) -> Table<'a> {
+        area.x += 1;
+        area.width = area.width.saturating_sub(1);
+        area.height = 1;
+        self.header_areas = Layout::horizontal(widths).spacing(1).split(area);
+        Table::default().header(header).widths(widths)
+    }
+
+    pub fn cursor_to_header_column(&self, position: Position) -> Option<usize> {
+        self.header_areas.iter().position(|i| i.contains(position))
     }
 
     pub fn cursor_to_table_item(&self, backend: &XashBackend) -> Option<usize> {

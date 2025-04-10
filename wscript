@@ -110,7 +110,7 @@ def configure(conf):
 def build(bld):
 	rule = bld.env.MAINTUI_CARGO + ['build'] + bld.env.MAINTUI_CARGO_OPTS
 	rule += ['--target-dir=%s' % os.path.join(bld.out_dir, '3rdparty', 'maintui', 'target')]
-	bld(rule=rule, target=bld.env.MAINTUI_TARGET, always=True)
+	bld(name='maintui', rule=Utils.shell_escape(rule), target=bld.env.MAINTUI_TARGET, always=True)
 
 	dest = os.path.join(bld.env.LIBDIR, bld.env.MAINTUI_DIST_NAME)
 	bld.install_as(dest, bld.env.MAINTUI_TARGET, chmod=0o0755)

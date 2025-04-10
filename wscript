@@ -56,26 +56,25 @@ def rust_triple(conf):
 
 def configure(conf):
 	conf.find_program('cargo')
-	cargo = 'cargo'
+	cargo = conf.env.CARGO
 
-	opts = ' --manifest-path=%s' % conf.path.find_node('Cargo.toml')
+	opts = ['--manifest-path=%s' % conf.path.find_node('Cargo.toml')]
 
 	triple = rust_triple(conf)
 	conf.start_msg('Cargo target triple')
 	conf.end_msg(triple)
-	opts += ' --target=%s' % triple
-
-	opts += ' --config=target.%s.linker=\\\"%s\\\"' % (triple, conf.env.LINK_CC[0])
+	opts += ['--target=%s' % triple]
+	opts += ['--config=target.%s.linker="%s"' % (triple, ' '.join(conf.env.LINK_CC))]
 
 	conf.start_msg('Cargo fetch dependencies')
-	status = conf.exec_command(cargo + ' fetch ' + opts)
+	status = conf.exec_command(cargo + ['fetch'] + opts)
 	if status != 0:
 		conf.end_msg('exit %d' % status, color='RED')
 		conf.fatal('failed to fetch Rust dependencies')
 	conf.end_msg('yes')
 
 	if conf.options.BUILD_TYPE == 'humanrights':
-		opts += ' --release'
+		opts += ['--release']
 		build_type = 'release'
 	else:
 		build_type = 'debug'
@@ -94,7 +93,7 @@ def configure(conf):
 
 	if features:
 		features = ','.join(features)
-		opts += ' --features ' + features
+		opts += ['--features', features]
 		conf.start_msg('Cargo build features')
 		conf.end_msg(features)
 
@@ -105,8 +104,8 @@ def configure(conf):
 	conf.env.MAINTUI_TARGET = os.path.join('target', triple, build_type, lib)
 
 def build(bld):
-	rule = bld.env.MAINTUI_CARGO + ' build ' + bld.env.MAINTUI_CARGO_OPTS
-	rule += ' --target-dir=%s' % os.path.join(bld.out_dir, '3rdparty', 'maintui', 'target')
+	rule = bld.env.MAINTUI_CARGO + ['build'] + bld.env.MAINTUI_CARGO_OPTS
+	rule += ['--target-dir=%s' % os.path.join(bld.out_dir, '3rdparty', 'maintui', 'target')]
 	bld(rule=rule, target=bld.env.MAINTUI_TARGET, always=True)
 
 	dest = os.path.join(bld.env.LIBDIR, bld.env.MAINTUI_DIST_NAME)

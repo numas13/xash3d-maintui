@@ -2,7 +2,7 @@
 # encoding: utf-8
 # numas13, 2025
 
-from waflib import Logs, Configure
+from waflib import Logs, Configure, Utils
 import os
 
 top = '.'
@@ -63,7 +63,7 @@ def configure(conf):
 	conf.start_msg('Cargo fetch dependencies')
 	status = conf.exec_command(cargo + ' fetch ' + opts)
 	if status != 0:
-		conf.end_msg('exit ' + status, color='RED')
+		conf.end_msg('exit %d' % status, color='RED')
 		conf.fatal('failed to fetch Rust dependencies')
 	conf.end_msg('yes')
 
@@ -91,13 +91,8 @@ def configure(conf):
 		conf.start_msg('Cargo build features')
 		conf.end_msg(features)
 
-	if conf.env.DEST_BINFMT == 'pe':
-		lib = 'menu.dll'
-	elif conf.env.DEST_BINFMT == 'mac-o':
-		lib = 'libmenu.dylib'
-	else:
-		lib = 'libmenu.so'
-
+	lib = conf.env.cshlib_PATTERN % 'menu'
+	conf.env.MAINTUI_DIST_NAME = conf.env.cshlib_PATTERN % 'menu_tui'
 	conf.env.MAINTUI_CARGO = cargo
 	conf.env.MAINTUI_CARGO_OPTS = opts
 	conf.env.MAINTUI_TARGET = os.path.join('target', triple, build_type, lib)
@@ -106,4 +101,6 @@ def build(bld):
 	rule = bld.env.MAINTUI_CARGO + ' build ' + bld.env.MAINTUI_CARGO_OPTS
 	rule += ' --target-dir=%s' % os.path.join(bld.out_dir, '3rdparty', 'maintui', 'target')
 	bld(rule=rule, target=bld.env.MAINTUI_TARGET, always=True)
-	bld.install_files(bld.env.LIBDIR, bld.env.MAINTUI_TARGET)
+
+	dest = os.path.join(bld.env.LIBDIR, bld.env.MAINTUI_DIST_NAME)
+	bld.install_as(dest, bld.env.MAINTUI_TARGET, chmod=0o0755)

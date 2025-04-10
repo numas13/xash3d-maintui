@@ -68,7 +68,12 @@ def configure(conf):
 	conf.start_msg('Cargo target triple')
 	conf.end_msg(triple)
 	opts += ['--target=%s' % triple]
-	opts += ['--config=target.%s.linker="%s"' % (triple, conf.env.LINK_CC[0])]
+
+	linker = conf.env.LINK_CC[0]
+	if os.sep == '\\':
+		linker = linker.replace(os.sep, '/')
+
+	opts += ['--config=target.%s.linker="%s"' % (triple, linker)]
 
 	conf.start_msg('Cargo fetch dependencies')
 	status = conf.exec_command(cargo + ['fetch'] + opts)

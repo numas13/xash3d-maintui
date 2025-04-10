@@ -4,6 +4,7 @@
 
 from waflib import Logs, Configure, Utils
 import os
+import sys
 
 top = '.'
 
@@ -70,10 +71,10 @@ def configure(conf):
 	opts += ['--target=%s' % triple]
 
 	linker = conf.env.LINK_CC[0]
-	#if os.sep == '\\':
-	#	linker = linker.replace(os.sep, '/')
-	if conf.env.DEST_OS != 'win32':
-		opts += ['--config=target.%s.linker="%s"' % (triple, linker)]
+	if os.sep == '\\':
+		linker = linker.replace(os.sep, '/')
+
+	opts += ['--config=target.%s.linker="%s"' % (triple, linker)]
 
 	conf.start_msg('Cargo fetch dependencies')
 	status = conf.exec_command(cargo + ['fetch'] + opts)
@@ -115,7 +116,11 @@ def configure(conf):
 def build(bld):
 	rule = bld.env.MAINTUI_CARGO + ['build'] + bld.env.MAINTUI_CARGO_OPTS
 	rule += ['--target-dir=%s' % os.path.join(bld.out_dir, '3rdparty', 'maintui', 'target')]
-	bld(name='maintui', rule=Utils.shell_escape(rule), target=bld.env.MAINTUI_TARGET, always=True)
+
+	def proc(task):
+		task.exec_command(rule)
+
+	bld(name='maintui', rule=proc, target=bld.env.MAINTUI_TARGET, always=True)
 
 	dest = os.path.join(bld.env.LIBDIR, bld.env.MAINTUI_DIST_NAME)
 	bld.install_as(dest, bld.env.MAINTUI_TARGET, chmod=0o0755)

@@ -68,7 +68,7 @@ def configure(conf):
 	conf.start_msg('Cargo target triple')
 	conf.end_msg(triple)
 	opts += ['--target=%s' % triple]
-	opts += ['--config=target.%s.linker="%s"' % (triple, ' '.join(conf.env.LINK_CC))]
+	opts += ['--config=target.%s.linker="%s"' % (triple, conf.env.LINK_CC[0])]
 
 	conf.start_msg('Cargo fetch dependencies')
 	status = conf.exec_command(cargo + ['fetch'] + opts)

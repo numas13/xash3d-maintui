@@ -21,12 +21,17 @@ def rust_triple(conf):
 		arch = 'i686'
 	elif conf.env.DEST_CPU == 'riscv':
 		arch = 'riscv64gc'
+	elif conf.env.DEST_CPU == 'thumb':
+		arch = 'thumbv7neon'
 	else:
 		arch = conf.env.DEST_CPU
 
 	vendor = 'unknown'
 	if conf.env.DEST_OS == 'linux':
-		os = 'linux-gnu'
+		if conf.env.DEST_CPU == 'thumb':
+			os = 'linux-gnueabihf'
+		else:
+			os = 'linux-gnu'
 	elif conf.env.DEST_OS == 'win32':
 		vendor = 'pc'
 		if conf.env.COMPILER_CC == 'msvc':

@@ -70,10 +70,10 @@ def configure(conf):
 	opts += ['--target=%s' % triple]
 
 	linker = conf.env.LINK_CC[0]
-	if os.sep == '\\':
-		linker = linker.replace(os.sep, '/')
-
-	opts += ['--config=target.%s.linker="%s"' % (triple, linker)]
+	#if os.sep == '\\':
+	#	linker = linker.replace(os.sep, '/')
+	if conf.env.DEST_OS != 'win32':
+		opts += ['--config=target.%s.linker="%s"' % (triple, linker)]
 
 	conf.start_msg('Cargo fetch dependencies')
 	status = conf.exec_command(cargo + ['fetch'] + opts)

@@ -409,12 +409,12 @@ checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
 [[package]]
 name = "xash3d-cell"
 version = "0.1.0"
-source = "git+https://github.com/numas13/xash3d-sdk.git#8775f11d4213c9c08b27e7c143dbb3fff65cbdce"
+source = "git+https://github.com/numas13/xash3d-sdk.git#2295100d2ac60c3ef9f80ae32ff9874213740266"
 
 [[package]]
 name = "xash3d-hl-resources"
 version = "0.1.0"
-source = "git+https://github.com/numas13/xash3d-sdk.git#8775f11d4213c9c08b27e7c143dbb3fff65cbdce"
+source = "git+https://github.com/numas13/xash3d-sdk.git#2295100d2ac60c3ef9f80ae32ff9874213740266"
 
 [[package]]
 name = "xash3d-maintui"
@@ -438,7 +438,7 @@ dependencies = [
 [[package]]
 name = "xash3d-math"
 version = "0.1.0"
-source = "git+https://github.com/numas13/xash3d-sdk.git#8775f11d4213c9c08b27e7c143dbb3fff65cbdce"
+source = "git+https://github.com/numas13/xash3d-sdk.git#2295100d2ac60c3ef9f80ae32ff9874213740266"
 
 [[package]]
 name = "xash3d-protocol"
@@ -467,7 +467,7 @@ dependencies = [
 [[package]]
 name = "xash3d-shared"
 version = "0.1.0"
-source = "git+https://github.com/numas13/xash3d-sdk.git#8775f11d4213c9c08b27e7c143dbb3fff65cbdce"
+source = "git+https://github.com/numas13/xash3d-sdk.git#2295100d2ac60c3ef9f80ae32ff9874213740266"
 dependencies = [
  "bitflags",
  "csz",
@@ -479,7 +479,7 @@ dependencies = [
 [[package]]
 name = "xash3d-ui-engine"
 version = "0.1.0"
-source = "git+https://github.com/numas13/xash3d-sdk.git#8775f11d4213c9c08b27e7c143dbb3fff65cbdce"
+source = "git+https://github.com/numas13/xash3d-sdk.git#2295100d2ac60c3ef9f80ae32ff9874213740266"
 dependencies = [
  "bitflags",
  "csz",
@@ -491,7 +491,7 @@ dependencies = [
 [[package]]
 name = "xash3d-utils"
 version = "0.1.0"
-source = "git+https://github.com/numas13/xash3d-sdk.git#8775f11d4213c9c08b27e7c143dbb3fff65cbdce"
+source = "git+https://github.com/numas13/xash3d-sdk.git#2295100d2ac60c3ef9f80ae32ff9874213740266"
 dependencies = [
  "csz",
  "log",

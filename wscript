@@ -23,6 +23,10 @@ def rust_triple(conf):
 		arch = 'riscv64gc'
 	elif conf.env.DEST_CPU == 'thumb':
 		arch = 'thumbv7neon'
+	elif conf.env.DEST_CPU == 'powerpc':
+		# this is incorrect, but we don't know DEST endianness here?
+		# we don't support big endian at this point in the engine yet
+		arch = 'powerpc64le'
 	else:
 		arch = conf.env.DEST_CPU
 

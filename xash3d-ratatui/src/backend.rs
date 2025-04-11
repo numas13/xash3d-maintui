@@ -14,7 +14,7 @@ use crate::{
     font::{Font, FontMap},
 };
 
-const DEFAULT_FONT_SIZE: u16 = 16;
+const DEFAULT_FONT_SIZE: u16 = 21;
 
 const XASH_LOGO: &[u8] = include_bytes!("../data/xash_logo.png");
 
@@ -38,7 +38,6 @@ pub struct XashBackend {
     cursor: Position,
     font_map: FontMap,
     cells: Vec<(u16, u16, RGBA, *const Cell)>,
-    underlines: Vec<(u16, u16, Color)>,
     bg: Picture,
 }
 
@@ -63,7 +62,6 @@ impl XashBackend {
             cursor: Position::ORIGIN,
             font_map: FontMap::new(Font::new(font_size as isize)),
             cells: Vec::new(),
-            underlines: Vec::new(),
             bg,
         };
         ret.calc_alignment();
@@ -220,13 +218,14 @@ impl Backend for XashBackend {
                 let s = (cell_size.width as c_int, cell_size.height as c_int);
                 self.eng.fill_rgba(p, s, color_bg(cell.bg));
             }
-            // move cursor to 3/4 of cell height
-            let y = y + (cell_size.height - cell_size.height / 4);
+            let y = y + self.font_map.font().ascent();
+            if cell.modifier.contains(Modifier::UNDERLINED) {
+                let p = (x as c_int, (y + 1) as c_int);
+                let s = (cell_size.width as c_int, 2);
+                self.eng.fill_rgba(p, s, color_fg(cell.fg));
+            }
             if !cell.symbol().trim().is_empty() {
                 self.cells.push((x, y, color_fg(cell.fg).into(), cell));
-            }
-            if cell.modifier.contains(Modifier::UNDERLINED) {
-                self.underlines.push((x, y + 1, cell.fg));
             }
         }
 
@@ -238,7 +237,7 @@ impl Backend for XashBackend {
                 let (pic, info) = self.font_map.get(c, cell.modifier);
                 pic.set_with_color(fg);
                 let gx = x as c_int + info.bearing_x as c_int;
-                let gy = y as c_int - info.bearing_y as c_int;
+                let gy = y as c_int + info.bearing_y as c_int;
                 let gw = info.w as c_int;
                 let gh = info.h as c_int;
                 let rect = wrect_s {
@@ -249,12 +248,6 @@ impl Backend for XashBackend {
                 };
                 self.eng.pic_draw_trans((gx, gy), (gw, gh), Some(&rect));
             }
-        }
-
-        for (x, y, color) in self.underlines.drain(..) {
-            let p = (x as c_int, y as c_int);
-            let s = (cell_size.width as c_int, 2);
-            self.eng.fill_rgba(p, s, color_fg(color));
         }
 
         Ok(())

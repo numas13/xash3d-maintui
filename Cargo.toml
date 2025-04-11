@@ -31,6 +31,3 @@ strip = "debuginfo"
 inherits = "release"
 lto = true
 codegen-units = 1
-
-[patch.crates-io]
-freetype-sys = { git = "https://github.com/a1batross/freetype-sys.git" }

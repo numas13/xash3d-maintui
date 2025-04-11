@@ -357,7 +357,8 @@ impl UiFunctions for Ui {
                     return;
                 }
 
-                if key == Key::Escape {
+                // pressing escape in the main menu returns back to the game
+                if key == Key::Escape && self.history.len() == 1 && engine().client_in_game() {
                     self.set_active_menu(false);
                     return;
                 }

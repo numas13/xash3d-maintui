@@ -7,7 +7,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [features]
-bundled = ["freetype-rs/bundled", "libz-sys/static"]
+bundled = []
 
 [dependencies]
 libc.workspace = true
@@ -15,5 +15,4 @@ log.workspace = true
 ratatui.workspace = true
 xash3d-shared.workspace = true
 xash3d-ui.workspace = true
-freetype-rs = "0.38.0"
-libz-sys = "1"
+ab_glyph = "0.2.29"

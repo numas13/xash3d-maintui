@@ -123,22 +123,6 @@ impl Bmp {
         }
     }
 
-    pub fn fill_glyph(&mut self, x: u16, y: u16, w: u16, h: u16, data: &[u8]) {
-        let y = self.height - y - h;
-        let mut bytes = data.iter();
-        for y in (y..y + h).rev() {
-            for x in x..x + w {
-                match bytes.next() {
-                    Some(&c) => self.set_pixel(x, y, 255, 255, 255, c),
-                    None => {
-                        warn!("Bmp::fill_rect: data is less then rect");
-                        return;
-                    }
-                }
-            }
-        }
-    }
-
     pub fn create_picture<S: AsRef<CStr>>(&self, path: S) -> Picture<S> {
         // TODO: return Result
         assert!(path.as_ref().to_bytes().ends_with(b".bmp"));

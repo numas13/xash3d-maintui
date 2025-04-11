@@ -40,7 +40,7 @@ impl<T> MyTable<T> {
     pub fn with_state(state: TableState) -> Self {
         Self {
             area: Rect::ZERO,
-            header_areas: Default::default(),
+            header_areas: Rc::new([]),
             state,
             items: Default::default(),
         }

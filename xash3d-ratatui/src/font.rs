@@ -1,131 +1,38 @@
 use std::ffi::CString;
 
-use freetype::{
-    face::{LoadFlag, StyleFlag},
-    GlyphSlot, Library,
-};
+use ab_glyph::{Font as _, FontRef, PxScaleFont, ScaleFont};
 use ratatui::style::Modifier;
 use xash3d_ui::{engine, picture::Picture};
 
 use crate::bmp::{Bmp, Components};
 
-type Face = freetype::Face<&'static [u8]>;
-
-// const FONTS: &[&str] = &[
-//     "fonts/DepartureMono-Regular.woff",
-// ];
-
-const FONT: &[u8] = include_bytes!("../fonts/DepartureMono-1.422/DepartureMono-Regular.woff");
+const FONT: &[u8] = include_bytes!("../fonts/DepartureMono-1.422/DepartureMono-Regular.otf");
 
 pub struct Font {
-    size: isize,
-    faces: Vec<Face>,
+    font: PxScaleFont<FontRef<'static>>,
 }
 
 impl Font {
     pub fn new(size: isize) -> Self {
-        let freetype = Library::init().unwrap();
-        let mut faces = Vec::new();
-
-        // for font in FONTS {
-        //     let face = freetype.new_face(font, 0).unwrap();
-        //     face.set_char_size(0, size * 64, 0, 0).unwrap();
-        //     faces.push(face);
-        // }
-
-        let face = freetype.new_memory_face2(FONT, 0).unwrap();
-        face.set_char_size(0, size * 64, 0, 0).unwrap();
-        faces.push(face);
-
-        Self { size, faces }
+        Self {
+            font: FontRef::try_from_slice(FONT)
+                .unwrap()
+                .into_scaled(size as f32),
+        }
     }
 
     pub fn size(&self) -> isize {
-        self.size
+        self.font.scale.y as isize
+    }
+
+    pub fn ascent(&self) -> u16 {
+        self.font.ascent() as u16
     }
 
     pub fn glyph_size(&self) -> (u16, u16) {
-        let (w, h) = if let Some(metrics) = self.faces[0].size_metrics() {
-            (metrics.max_advance as u32, metrics.height as u32)
-        } else {
-            (
-                self.faces[0].max_advance_width() as u32,
-                self.faces[0].height() as u32,
-            )
-        };
-        let w = (w / 64 + 1) as u16;
-        let h = (h / 64 + 1) as u16;
+        let w = self.font.h_advance(self.font.glyph_id('_')) as u16;
+        let h = self.font.height() as u16;
         (w, h)
-    }
-
-    fn find_face(&self, modifier: Modifier) -> &Face {
-        let mut style = StyleFlag::empty();
-        if modifier.contains(Modifier::BOLD) {
-            style.insert(StyleFlag::BOLD);
-        }
-        if modifier.contains(Modifier::ITALIC) {
-            style.insert(StyleFlag::ITALIC);
-        }
-        self.faces
-            .iter()
-            .find(|i| i.style_flags().contains(style))
-            .unwrap_or(&self.faces[0])
-    }
-
-    pub fn find_glyph(&self, c: char, modifier: Modifier) -> Option<Glyph> {
-        let face = self.find_face(modifier);
-        if face
-            .load_char(c as usize, LoadFlag::DEFAULT | LoadFlag::RENDER)
-            .is_err()
-        {
-            error!("failed to load char '{c}' \\u{:04x}", c as u32);
-            return None;
-        }
-        Some(Glyph { slot: face.glyph() })
-    }
-}
-
-pub struct Glyph<'a> {
-    slot: &'a GlyphSlot,
-}
-
-impl Glyph<'_> {
-    pub fn bitmap(&self) -> Bitmap {
-        Bitmap {
-            bitmap: self.slot.bitmap(),
-        }
-    }
-
-    pub fn horizontal_bearing(&self) -> (i16, i16) {
-        let metrics = self.slot.metrics();
-        let x = metrics.horiBearingX / 64;
-        let y = metrics.horiBearingY / 64;
-        (x as i16, y as i16)
-    }
-}
-
-pub struct Bitmap {
-    bitmap: freetype::Bitmap,
-}
-
-impl Bitmap {
-    pub fn width(&self) -> u16 {
-        self.bitmap.width() as u16
-    }
-
-    pub fn height(&self) -> u16 {
-        self.buffer()
-            .len()
-            .checked_div(self.width() as usize)
-            .unwrap_or(0) as u16
-    }
-
-    pub fn size(&self) -> (u16, u16) {
-        (self.width(), self.height())
-    }
-
-    pub fn buffer(&self) -> &[u8] {
-        self.bitmap.buffer()
     }
 }
 
@@ -140,21 +47,19 @@ pub struct GlyphInfo {
 }
 
 impl GlyphInfo {
-    fn new(x: u16, y: u16, glyph: &Glyph) -> Self {
-        let (w, h) = glyph.bitmap().size();
-        let (bearing_x, bearing_y) = glyph.horizontal_bearing();
+    fn new(x: u16, y: u16, bounds: &ab_glyph::Rect) -> Self {
         GlyphInfo {
             x,
             y,
-            w,
-            h,
-            bearing_x,
-            bearing_y,
+            w: bounds.width() as u16,
+            h: bounds.height() as u16,
+            bearing_x: bounds.min.x as i16,
+            bearing_y: bounds.min.y as i16,
         }
     }
 }
 
-pub struct GlyphMap {
+struct GlyphMap {
     start: u32,
     pic: Picture<CString>,
     slots: Box<[GlyphInfo; Self::SIZE]>,
@@ -163,70 +68,71 @@ pub struct GlyphMap {
 impl GlyphMap {
     const SIZE: usize = 256;
 
-    pub fn new(font: &Font, modifier: Modifier, start: u32) -> Self {
+    fn new(font: &Font, start: u32) -> Self {
         let (gw, gh) = font.glyph_size();
+        let font = &font.font;
         let mut slots = Box::new([GlyphInfo::default(); Self::SIZE]);
         let width = 32 * gw;
         let height = (Self::SIZE / 32) as u16 * gh;
         let mut bmp = Bmp::builder(width, height)
             .components(Components::RGBA)
             .build();
-        let mut x = 0;
-        let mut y = 0;
+        let (mut x, mut y) = (0, 0);
         let end = start + Self::SIZE as u32;
         trace!("generate glyph map for {start:04x}:{end:04x}");
         for i in 0..Self::SIZE {
             let n = start + i as u32;
-            let Some(glyph) = char::from_u32(n)
-                .and_then(|c| {
-                    if c.is_control() {
-                        return None;
-                    }
-                    // trace!("generate glyph for '\\u{n:04x}' '{c}'");
-                    font.find_glyph(c, modifier)
-                })
-                .or_else(|| {
-                    // trace!("using fallback glyph for '\\u{n:04x}'");
-                    font.find_glyph('\u{25a1}', modifier)
-                })
-            else {
+            let c = match char::from_u32(n) {
+                Some(c) if c.is_control() => continue,
+                Some(c) => c,
+                None => continue,
+            };
+            // trace!("generate glyph for '\\u{n:04x}' '{c}'");
+            let glyph = font.scaled_glyph(c);
+            let outline = font
+                .outline_glyph(glyph)
+                .or_else(|| font.outline_glyph(font.scaled_glyph('\u{25a1}')));
+            let Some(outline) = outline else {
+                trace!("skip glyph for '\\u{n:04x}' '{c}'");
                 continue;
             };
-            let bitmap = glyph.bitmap();
-            let (w, h) = bitmap.size();
+            let bounds = outline.px_bounds();
+            let w = bounds.width() as u16;
             if x + w > width {
                 x = 0;
                 y += gh;
             }
-            bmp.fill_glyph(x, y, w, h, bitmap.buffer());
-            slots[i] = GlyphInfo::new(x, y, &glyph);
+            outline.draw(|px, py, f| {
+                if f <= 0.0 {
+                    return;
+                }
+                let a = (f * 255.0) as u8;
+                let x = x + px as u16;
+                let y = bmp.height() - (y + py as u16) - 1;
+                bmp.set_pixel(x, y, 255, 255, 255, a);
+            });
+            slots[i] = GlyphInfo::new(x, y, &bounds);
             x += w;
         }
 
-        // for (i, info) in slots.iter().enumerate() {
-        //     let i = start + i as u32;
-        //     let (x, y) = (info.x, info.y);
-        //     let (w, h) = (info.w, info.h);
-        //     let (bx, by) = (info.bearing_x, info.bearing_y);
-        //     trace!("'\\u{i:04x}' {x:3}x{y:<3} {w:3}x{h:<3} {bx:3}x{by:<3x}");
-        // }
-
-        let mut path = format!("#mainui/backend/map{start:04x}");
-        if modifier.contains(Modifier::BOLD) {
-            path.push_str("_bold");
+        if false {
+            for (i, info) in slots.iter().enumerate() {
+                let i = start + i as u32;
+                let (x, y) = (info.x, info.y);
+                let (w, h) = (info.w, info.h);
+                let (bx, by) = (info.bearing_x, info.bearing_y);
+                trace!("'\\u{i:04x}' {x:3}x{y:<3} {w:3}x{h:<3} {bx:3}x{by:<3x}");
+            }
         }
-        if modifier.contains(Modifier::ITALIC) {
-            path.push_str("_italic");
-        }
-        path.push_str(".bmp");
 
-        // {
-        //     let path = format!("/tmp/map{start:04x}.bmp");
-        //     std::fs::write(path, bmp.as_slice()).unwrap();
-        // }
+        let path = format!("#mainui/backend/map{start:04x}.bmp");
+
+        if false {
+            let path = format!("/tmp/map{start:04x}.bmp");
+            std::fs::write(path, bmp.as_slice()).unwrap();
+        }
 
         let pic = bmp.create_picture(CString::new(path).unwrap());
-
         Self { start, pic, slots }
     }
 
@@ -245,14 +151,14 @@ impl Drop for GlyphMap {
 
 pub struct FontMap {
     font: Font,
-    maps: [Vec<GlyphMap>; 4],
+    map: Vec<GlyphMap>,
 }
 
 impl FontMap {
     pub fn new(font: Font) -> Self {
         Self {
             font,
-            maps: Default::default(),
+            map: Default::default(),
         }
     }
 
@@ -264,26 +170,17 @@ impl FontMap {
         self.font.glyph_size()
     }
 
-    pub fn get(&mut self, c: char, modifier: Modifier) -> (&Picture<CString>, &GlyphInfo) {
-        let mut index = 0;
-        if modifier.contains(Modifier::BOLD) {
-            index |= 1;
-        }
-        if modifier.contains(Modifier::ITALIC) {
-            index |= 2;
-        }
-        let map = &mut self.maps[index];
-
+    pub fn get(&mut self, c: char, _: Modifier) -> (&Picture<CString>, &GlyphInfo) {
         let start = c as u32 & !(GlyphMap::SIZE as u32 - 1);
-        let index = match map.binary_search_by_key(&start, |i| i.start) {
+        let index = match self.map.binary_search_by_key(&start, |i| i.start) {
             Ok(index) => index,
             Err(index) => {
-                let info = GlyphMap::new(&self.font, modifier, start);
-                map.insert(index, info);
+                let info = GlyphMap::new(&self.font, start);
+                self.map.insert(index, info);
                 index
             }
         };
-        let info = &map[index];
+        let info = &self.map[index];
         (&info.pic, info.get(c as usize & (GlyphMap::SIZE - 1)))
     }
 }

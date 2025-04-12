@@ -2,11 +2,16 @@ use std::{borrow::Cow, char, collections::HashMap, ffi::CStr, fmt::Write, str};
 
 use csz::CStrArray;
 use xash3d_cell::SyncOnceCell;
-use xash3d_shared::parser::{Error, Tokens};
+use xash3d_shared::{
+    cvar::CVarFlags,
+    parser::{Error, Tokens},
+};
 use xash3d_ui::engine;
 
 const DEFAULT_LANGUAGE: &str = "english";
 const CUSTOM_STRINGS_PATH: &CStr = c"gfx/shell/strings.lst";
+
+const UI_LANGUAGE: &CStr = c"ui_language";
 
 #[derive(Default)]
 pub struct Strings {
@@ -25,12 +30,20 @@ impl Strings {
             warn!("unimplemented {CUSTOM_STRINGS_PATH:?}");
         }
 
-        engine().client_cmd_now(c"exec mainui.cfg\n");
+        let eng = engine();
+        eng.client_cmd_now(c"exec mainui.cfg\n");
 
         self.load_language(DEFAULT_LANGUAGE);
+        let lang = eng.get_cvar_string(UI_LANGUAGE);
+        if let Ok(lang) = lang.to_str() {
+            if lang != DEFAULT_LANGUAGE {
+                self.load_language(lang);
+            }
+        }
     }
 
     fn load_language(&mut self, lang: &str) {
+        trace!("load strings for language \"{lang}\"");
         let info = engine().get_game_info_2().unwrap();
         let gamedir = info.gamefolder.as_c_str().to_str().unwrap();
         for i in ["gameui", "valve", "mainui"] {
@@ -94,6 +107,10 @@ impl Strings {
 }
 
 static STRINGS: SyncOnceCell<Strings> = unsafe { SyncOnceCell::new() };
+
+pub fn init() {
+    engine().register_variable(UI_LANGUAGE, DEFAULT_LANGUAGE, CVarFlags::ARCHIVE);
+}
 
 pub fn strings() -> &'static Strings {
     STRINGS.get_or_init(Strings::new)

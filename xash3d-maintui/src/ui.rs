@@ -20,6 +20,7 @@ use xash3d_utils::macros::unimpl;
 use crate::{
     export::{Api, MenuApi, UiFunctions, UiFunctionsExtended},
     input::{Key, KeyEvent, Modifier},
+    strings,
     widgets::{ConfirmPopup, ConfirmResult, WidgetMut},
 };
 
@@ -110,6 +111,8 @@ impl Ui {
             Api::global().activate_console(false);
         }
         engine().add_command(c"fg", Some(cmd_fg));
+
+        strings::init();
 
         Ui {
             history: vec![crate::menu::main()],

@@ -83,13 +83,6 @@ def configure(conf):
 
 	features = []
 
-	conf.start_msg('Use freetype library for maintui')
-	if conf.options.BUILD_BUNDLED_DEPS or not conf.check_cfg(package='freetype2', mandatory=False):
-		features.append('bundled')
-		conf.end_msg('bundled')
-	else:
-		conf.end_msg('system')
-
 	if features:
 		features = ','.join(features)
 		opts += ' --features ' + features

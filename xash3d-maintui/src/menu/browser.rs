@@ -203,12 +203,15 @@ impl FavoriteServer {
 fn load_servers_from_file(path: &str) -> Option<Vec<FavoriteServer>> {
     let engine = engine();
     let file = engine.load_file(path)?;
-    let data = str::from_utf8(file.as_slice()).ok()?;
+    let Ok(data) = str::from_utf8(file.as_slice()) else {
+        error!("invalid utf8 in file \"{path}\"");
+        return None;
+    };
     let mut tokens = Tokens::new(data).handle_colon(false);
     let mut servers = Vec::<FavoriteServer>::new();
     while let Some((Ok(addr), Ok(protocol))) = tokens.next().zip(tokens.next()) {
         let Some(addr) = engine.string_to_addr(addr) else {
-            warn!("invalid address {addr:?} in {path}");
+            warn!("invalid address {addr:?} in file \"{path}\"");
             continue;
         };
         if !servers.iter().any(|i| engine.compare_addr(&i.addr, &addr)) {
@@ -218,19 +221,24 @@ fn load_servers_from_file(path: &str) -> Option<Vec<FavoriteServer>> {
             });
         }
     }
+    trace!("load {} servers from file \"{path}\"", servers.len());
     Some(servers)
 }
 
 fn save_servers_to_file<'a>(path: &str, servers: impl Iterator<Item = &'a FavoriteServer>) {
     let engine = engine();
     let mut out = String::new();
+    let mut count = 0;
     for i in servers {
+        count += 1;
         let address = engine.addr_to_string(i.addr);
         writeln!(&mut out, "{address} {}", i.protocol).unwrap();
     }
-    if !out.is_empty() {
+    if count > 0 {
+        trace!("save {count} servers to file \"{path}\"");
         engine.save_file(path, out.as_bytes());
     } else {
+        trace!("delete servers file \"{path}\"");
         engine.remove_file(path);
     }
 }
@@ -692,14 +700,17 @@ impl Browser {
             return;
         };
         let engine = engine();
+        let address = engine.addr_to_string(server.addr);
         if let Some(i) = self
             .favorite_servers
             .iter()
             .position(|i| engine.compare_addr(&i.addr, &server.addr))
         {
+            trace!("remove server \"{address}\" from favorite");
             server.favorite = false;
             self.favorite_servers.remove(i);
         } else {
+            trace!("add server \"{address}\" to favorite");
             server.favorite = true;
             let favorite = FavoriteServer::new(server.addr, server.protocol());
             self.favorite_servers.push(favorite);

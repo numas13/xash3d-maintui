@@ -150,6 +150,9 @@ impl Ui {
     }
 
     fn quit(&mut self) {
+        while let Some(mut i) = self.history.pop() {
+            i.on_menu_hide();
+        }
         engine().client_cmd(c"quit");
     }
 

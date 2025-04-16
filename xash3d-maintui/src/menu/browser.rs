@@ -746,7 +746,10 @@ impl Browser {
 
 impl Drop for Browser {
     fn drop(&mut self) {
-        save_servers_to_file(FAVORITE_SERVERS_LIST, self.favorite_servers.iter());
+        if !self.is_lan {
+            // TODO: save only when changed
+            save_servers_to_file(FAVORITE_SERVERS_LIST, self.favorite_servers.iter());
+        }
     }
 }
 

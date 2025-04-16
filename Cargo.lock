@@ -68,7 +68,7 @@ dependencies = [
 [[package]]
 name = "csz"
 version = "0.2.0"
-source = "git+https://github.com/numas13/csz.git#ef5cfae25bae38759d85808d33150ddcb741f0d4"
+source = "git+https://github.com/numas13/csz.git#c277e5b8fdaeb85c47549060cc92805bf79ff4fb"
 
 [[package]]
 name = "darling"

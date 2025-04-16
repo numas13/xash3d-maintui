@@ -26,8 +26,8 @@ use super::create_server::CreateServerMenu;
 
 const DEFAULT_PORT: u16 = 27015;
 
-const FAVORITE_SERVERS_LIST: &str = "favorite_servers.lst";
-// const HISTORY_SERVERS_LIST: &str = "history_servers.lst";
+const FAVORITE_SERVERS_PATH: &str = "favorite_servers.lst";
+// const HISTORY_SERVERS_PATH: &str = "history_servers.lst";
 
 const MENU_BACK: &str = "Back";
 const MENU_CREATE_SERVER: &str = "#GameUI_GameMenu_CreateServer";
@@ -159,13 +159,13 @@ impl ServerInfo {
     }
 }
 
-struct FavoriteServer {
+struct SavedServer {
     addr: netadr_s,
     // FIXME: replace with enum
     protocol: String,
 }
 
-impl FavoriteServer {
+impl SavedServer {
     fn new(addr: netadr_s, protocol: &str) -> Self {
         Self {
             addr,
@@ -200,46 +200,80 @@ impl FavoriteServer {
     }
 }
 
-fn load_servers_from_file(path: &str) -> Option<Vec<FavoriteServer>> {
-    let engine = engine();
-    let file = engine.load_file(path)?;
-    let Ok(data) = str::from_utf8(file.as_slice()) else {
-        error!("invalid utf8 in file \"{path}\"");
-        return None;
-    };
-    let mut tokens = Tokens::new(data).handle_colon(false);
-    let mut servers = Vec::<FavoriteServer>::new();
-    while let Some((Ok(addr), Ok(protocol))) = tokens.next().zip(tokens.next()) {
-        let Some(addr) = engine.string_to_addr(addr) else {
-            warn!("invalid address {addr:?} in file \"{path}\"");
-            continue;
-        };
-        if !servers.iter().any(|i| engine.compare_addr(&i.addr, &addr)) {
-            servers.push(FavoriteServer {
-                addr,
-                protocol: protocol.to_string(),
-            });
-        }
-    }
-    trace!("load {} servers from file \"{path}\"", servers.len());
-    Some(servers)
+#[derive(Default)]
+struct SavedServers {
+    list: Vec<SavedServer>,
+    changed: bool,
 }
 
-fn save_servers_to_file<'a>(path: &str, servers: impl Iterator<Item = &'a FavoriteServer>) {
-    let engine = engine();
-    let mut out = String::new();
-    let mut count = 0;
-    for i in servers {
-        count += 1;
-        let address = engine.addr_to_string(i.addr);
-        writeln!(&mut out, "{address} {}", i.protocol).unwrap();
+impl SavedServers {
+    fn load_from_file(path: &str) -> Result<Self, &'static str> {
+        let engine = engine();
+        let file = engine.load_file(path).ok_or("failed to load")?;
+        let data = str::from_utf8(file.as_slice()).map_err(|_| "invalid utf8")?;
+        let mut tokens = Tokens::new(data).handle_colon(false);
+        let mut servers = Self::default();
+        while let Some((Ok(addr), Ok(protocol))) = tokens.next().zip(tokens.next()) {
+            let Some(addr) = engine.string_to_addr(addr) else {
+                warn!("invalid address {addr:?} in file \"{path}\"");
+                continue;
+            };
+            if !servers.contains(&addr) {
+                servers.list.push(SavedServer {
+                    addr,
+                    protocol: protocol.to_string(),
+                });
+            }
+        }
+        trace!("load {} servers from file \"{path}\"", servers.list.len());
+        Ok(servers)
     }
-    if count > 0 {
-        trace!("save {count} servers to file \"{path}\"");
-        engine.save_file(path, out.as_bytes());
-    } else {
-        trace!("delete servers file \"{path}\"");
-        engine.remove_file(path);
+
+    fn save_to_file(&self, path: &str) {
+        if !self.changed {
+            return;
+        }
+        let engine = engine();
+        let mut out = String::new();
+        let mut count = 0;
+        for i in &self.list {
+            count += 1;
+            let address = engine.addr_to_string(i.addr);
+            writeln!(&mut out, "{address} {}", i.protocol).unwrap();
+        }
+        if count > 0 {
+            trace!("save {count} servers to file \"{path}\"");
+            engine.save_file(path, out.as_bytes());
+        } else {
+            trace!("delete servers file \"{path}\"");
+            engine.remove_file(path);
+        }
+    }
+
+    fn insert(&mut self, addr: netadr_s, protocol: &str) -> Option<&SavedServer> {
+        if !self.contains(&addr) {
+            self.changed = true;
+            self.list.push(SavedServer::new(addr, protocol));
+            self.list.last()
+        } else {
+            None
+        }
+    }
+
+    fn remove(&mut self, addr: &netadr_s) -> Option<SavedServer> {
+        let engine = engine();
+        self.list
+            .iter()
+            .position(|i| engine.compare_addr(&i.addr, addr))
+            .map(|i| {
+                self.changed = true;
+                self.list.remove(i)
+            })
+    }
+
+    fn contains(&self, addr: &netadr_s) -> bool {
+        let engine = engine();
+        self.list.iter().any(|i| engine.compare_addr(&i.addr, addr))
     }
 }
 
@@ -301,7 +335,7 @@ pub struct Browser {
     tab: Tab,
     table: MyTable<ServerInfo>,
     tabs: [(Tab, Rect); 3],
-    favorite_servers: Vec<FavoriteServer>,
+    favorite_servers: SavedServers,
     address_popup: InputPopup,
     protocol_popup: ListPopup,
 }
@@ -329,11 +363,13 @@ impl Browser {
             (Key::Char(b'b'), MENU_BACK),
         ]);
 
-        let favorite_servers = if !is_lan {
-            load_servers_from_file(FAVORITE_SERVERS_LIST).unwrap_or_default()
-        } else {
-            Default::default()
-        };
+        let mut favorite_servers = SavedServers::default();
+        if !is_lan {
+            match SavedServers::load_from_file(FAVORITE_SERVERS_PATH) {
+                Ok(servers) => favorite_servers = servers,
+                Err(err) => error!("{err}, file \"{FAVORITE_SERVERS_PATH}\""),
+            }
+        }
 
         Self {
             state: State::default(),
@@ -370,7 +406,7 @@ impl Browser {
     }
 
     fn query_favorite_servers(&mut self) {
-        for i in &self.favorite_servers {
+        for i in &self.favorite_servers.list {
             i.query_info();
             self.table.push(i.fake_server_info());
         }
@@ -428,22 +464,11 @@ impl Browser {
         server.connect("")
     }
 
-    fn is_favorite(&self, addr: &netadr_s) -> bool {
-        let engine = engine();
-        self.favorite_servers
-            .iter()
-            .any(|i| engine.compare_addr(&i.addr, addr))
-    }
-
     fn add_favorite(&mut self, addr: netadr_s, protocol: &str) -> bool {
         let engine = engine();
-        let address = engine.addr_to_string(addr).to_string();
-        trace!("Add server to favorite list {address:?} {protocol:?}");
-        if !self
-            .favorite_servers
-            .iter()
-            .any(|i| engine.compare_addr(&i.addr, &addr))
-        {
+        if let Some(server) = self.favorite_servers.insert(addr, protocol) {
+            let address = engine.addr_to_string_ref(&addr);
+            trace!("add server \"{address}\" to favorite list");
             if let Some(server) = self
                 .table
                 .items
@@ -452,14 +477,12 @@ impl Browser {
             {
                 server.favorite = true;
             }
-            let server = FavoriteServer::new(addr, protocol);
             if self.tab == Tab::Favorite {
                 // FIXME: track ping for each server
-                self.reset_ping();
+                self.time = Instant::now();
                 server.query_info();
                 self.table.push(server.fake_server_info());
             }
-            self.favorite_servers.push(server);
             true
         } else {
             false
@@ -696,24 +719,16 @@ impl Browser {
         let Some(selected) = self.table.state.selected() else {
             return;
         };
-        let Some(server) = self.table.items.get_mut(selected) else {
-            return;
-        };
-        let engine = engine();
-        let address = engine.addr_to_string(server.addr);
-        if let Some(i) = self
-            .favorite_servers
-            .iter()
-            .position(|i| engine.compare_addr(&i.addr, &server.addr))
-        {
-            trace!("remove server \"{address}\" from favorite");
-            server.favorite = false;
-            self.favorite_servers.remove(i);
-        } else {
-            trace!("add server \"{address}\" to favorite");
-            server.favorite = true;
-            let favorite = FavoriteServer::new(server.addr, server.protocol());
-            self.favorite_servers.push(favorite);
+        if let Some(server) = self.table.items.get_mut(selected) {
+            let address = engine().addr_to_string_ref(&server.addr);
+            if self.favorite_servers.remove(&server.addr).is_some() {
+                server.favorite = false;
+                trace!("remove server \"{address}\" from favorite list");
+            } else {
+                server.favorite = true;
+                trace!("add server \"{address}\" to favorite list");
+                self.favorite_servers.insert(server.addr, server.protocol());
+            }
         }
     }
 
@@ -747,8 +762,7 @@ impl Browser {
 impl Drop for Browser {
     fn drop(&mut self) {
         if !self.is_lan {
-            // TODO: save only when changed
-            save_servers_to_file(FAVORITE_SERVERS_LIST, self.favorite_servers.iter());
+            self.favorite_servers.save_to_file(FAVORITE_SERVERS_PATH);
         }
     }
 }
@@ -901,7 +915,7 @@ impl Menu for Browser {
                     self.sorted = false;
                 } else {
                     if !self.is_lan && self.tab != Tab::Nat {
-                        info.favorite = self.is_favorite(&addr);
+                        info.favorite = self.favorite_servers.contains(&addr);
                     }
                     if self.tab != Tab::Favorite || info.favorite {
                         self.table.push(info);

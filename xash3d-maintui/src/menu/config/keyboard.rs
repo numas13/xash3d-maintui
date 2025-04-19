@@ -13,18 +13,22 @@ use xash3d_ui::engine;
 
 use crate::{
     input::{Key, KeyEvent},
-    strings::strings,
+    strings::Localize,
     ui::{sound, utils, Control, Menu, Screen, State},
     widgets::{List, MyTable, SelectResult, WidgetMut},
 };
+
+mod i18n {
+    pub use crate::i18n::{all::*, menu::config_keyboard::*};
+}
 
 const MAX_KEYS: usize = 256;
 
 const KEYBOARD_ACTION_LIST_PATH: &CStr = c"gfx/shell/kb_act.lst";
 const KEYBOARD_DEFAULT_LIST_PATH: &CStr = c"gfx/shell/kb_def.lst";
 
-const MENU_BACK: &str = "Back";
-const MENU_RESET: &str = "Reset";
+const MENU_BACK: &str = i18n::BACK;
+const MENU_RESET: &str = i18n::RESET;
 
 #[derive(Copy, Clone, Default, PartialEq, Eq)]
 enum Focus {
@@ -109,9 +113,8 @@ impl Controls {
 
     fn load_keys(&mut self) {
         self.table.clear();
-        let strings = strings();
         Self::load_file(KEYBOARD_ACTION_LIST_PATH, |bind, name| {
-            let name = strings.get(name).to_string();
+            let name = name.localize().to_string();
             if bind == "blank" {
                 self.table.push(Item::Text(name));
             } else {
@@ -194,7 +197,11 @@ impl Controls {
     }
 
     fn draw_table(&mut self, area: Rect, buf: &mut Buffer) {
-        let header = Row::new(["Action", "Key/Button", "Alternate"]);
+        let header = Row::new([
+            i18n::COLUMN_ACTION.localize(),
+            i18n::COLUMN_KEY.localize(),
+            i18n::COLUMN_KEY_ALT.localize(),
+        ]);
         let table = Table::default()
             .header(header.style(Style::new().bold()))
             .widths([
@@ -222,7 +229,7 @@ impl Controls {
             return;
         }
         let block = utils::popup_block("");
-        let text = "Press key or escape to cancel";
+        let text = i18n::PRESS_KEY.localize();
         let line = Paragraph::new(text)
             .block(block)
             .style(Style::new().black().bold().on_gray());
@@ -234,7 +241,7 @@ impl Controls {
 
 impl Menu for Controls {
     fn draw(&mut self, area: Rect, buf: &mut Buffer, screen: &Screen) {
-        let title = "Keyboard settings";
+        let title = i18n::TITLE;
         let [menu_area, table_area] = Layout::vertical([
             Constraint::Length(self.menu.len() as u16 + 1),
             Constraint::Percentage(100),

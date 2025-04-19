@@ -7,9 +7,14 @@ use xash3d_ui::engine;
 use crate::{
     config_list::{ConfigBackend, ConfigEntry, ConfigList},
     input::KeyEvent,
+    strings::Localize,
     ui::{Control, Menu, Screen},
     widgets::ListPopup,
 };
+
+mod i18n {
+    pub use crate::i18n::menu::config_network::*;
+}
 
 const CMD_RATE: &[u32] = &[25, 30, 60, 100, 150, 200, 250];
 const UPDATE_RATE: &[u32] = &[25, 30, 60, 100, 150, 200, 250];
@@ -41,16 +46,9 @@ impl Network {
 }
 
 const NETWORKS: &[Network] = &[
-    Network::new("Normal internet connection", 1400, 0, 30, 60, 25000),
-    Network::new(
-        "DSL or PPTP with limited packet size",
-        1200,
-        1000,
-        30,
-        60,
-        25000,
-    ),
-    Network::new("Slow connection mode (64kbps)", 900, 700, 25, 30, 7500),
+    Network::new(i18n::NETWORK_MODE_NORMAL, 1400, 0, 30, 60, 25000),
+    Network::new(i18n::NETWORK_MODE_DSL, 1200, 1000, 30, 60, 25000),
+    Network::new(i18n::NETWORK_MODE_SLOW, 900, 700, 25, 30, 7500),
 ];
 
 fn cvar_to_index(name: &CStr, slice: &[u32]) -> usize {
@@ -67,9 +65,12 @@ struct NetworkMode;
 
 impl NetworkMode {
     fn config() -> ConfigEntry<usize, ListPopup> {
-        ConfigEntry::list("Network mode", NETWORKS.iter().map(|i| i.name))
-            .fixed_value("Select")
-            .build(Self)
+        ConfigEntry::list(
+            i18n::NETWORK_MODE.localize(),
+            NETWORKS.iter().map(|i| i.name.localize()),
+        )
+        .fixed_value(i18n::NETWORK_MODE_SELECT.localize())
+        .build(Self)
     }
 }
 
@@ -128,19 +129,24 @@ pub struct NetworkConfig {
 
 impl NetworkConfig {
     pub fn new() -> Self {
-        let mut list = ConfigList::with_back("Network settings");
-        list.checkbox("Allow download", c"cl_allowdownload");
+        let mut list = ConfigList::with_back(i18n::TITLE.localize());
+        list.checkbox(i18n::ALLOW_DOWNLOAD.localize(), c"cl_allowdownload");
         list.add(NetworkMode::config());
         let devel = engine().get_cvar_float(c"developer") as i32;
-        list.add(Rate::config("Network speed", c"rate", RATE, devel > 0));
         list.add(Rate::config(
-            "Command rate",
+            i18n::NETWORK_SPEED.localize(),
+            c"rate",
+            RATE,
+            devel > 0,
+        ));
+        list.add(Rate::config(
+            i18n::COMMAND_RATE.localize(),
             c"cl_cmdrate",
             CMD_RATE,
             devel > 1,
         ));
         list.add(Rate::config(
-            "Update rate",
+            i18n::UPDATE_RATE.localize(),
             c"cl_updaterate",
             UPDATE_RATE,
             devel > 1,

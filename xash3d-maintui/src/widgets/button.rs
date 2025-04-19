@@ -1,24 +1,26 @@
 use ratatui::prelude::*;
 
+use crate::{i18n, strings::strings};
+
 pub struct Button {
     pub area: Rect,
-    pub label: &'static str,
+    pub label: String,
 }
 
 impl Button {
-    pub fn new(label: &'static str) -> Self {
+    pub fn new(label: &str) -> Self {
         Self {
             area: Rect::ZERO,
-            label,
+            label: format!("{label:^21}"),
         }
     }
 
     pub fn cancel() -> Self {
-        Self::new("        Cancel        ")
+        Self::new(strings().get(i18n::all::CANCEL))
     }
 
     pub fn yes() -> Self {
-        Self::new("         Yes         ")
+        Self::new(strings().get(i18n::all::YES))
     }
 
     pub fn render(&mut self, area: Rect, buf: &mut Buffer, focused: bool) {
@@ -27,7 +29,7 @@ impl Button {
         } else {
             Style::default().white().on_black()
         };
-        Line::raw(self.label)
+        Line::raw(&self.label)
             .style(style)
             .centered()
             .render(area, buf);

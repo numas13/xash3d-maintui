@@ -46,7 +46,7 @@ impl Strings {
         trace!("load strings for language \"{lang}\"");
         let info = engine().get_game_info_2().unwrap();
         let gamedir = info.gamefolder.as_c_str().to_str().unwrap();
-        for i in ["gameui", "valve", "mainui"] {
+        for i in ["gameui", "valve", "mainui", "maintui"] {
             if i != gamedir {
                 self.load_gamedir(i, lang);
             }
@@ -87,18 +87,18 @@ impl Strings {
                 break;
             }
             let value = escape_string(tokens.parse()?);
-            self.map.insert(name.to_string(), value);
+            if !value.is_empty() {
+                self.map.insert(name.to_string(), value);
+            }
         }
         tokens.expect("}")?;
         Ok(())
     }
 
     pub fn try_get<'a>(&'a self, s: &'a str) -> Option<&'a str> {
-        if let Some(s) = s.strip_prefix("#") {
-            self.map.get(s).map(|v| v.as_str())
-        } else {
-            Some(s)
-        }
+        self.map
+            .get(s.strip_prefix("#").unwrap_or(s))
+            .map(|v| v.as_str())
     }
 
     pub fn get<'a>(&'a self, s: &'a str) -> &'a str {
@@ -116,9 +116,9 @@ pub fn strings() -> &'static Strings {
     STRINGS.get_or_init(Strings::new)
 }
 
-pub fn try_get(s: &str) -> Option<&str> {
-    strings().try_get(s)
-}
+// pub fn try_get(s: &str) -> Option<&str> {
+//     strings().try_get(s)
+// }
 
 pub fn get(s: &str) -> &str {
     strings().get(s)
@@ -186,4 +186,14 @@ fn escape_string(s: &str) -> String {
         out.push(c);
     }
     out
+}
+
+pub trait Localize {
+    fn localize(&self) -> &str;
+}
+
+impl Localize for str {
+    fn localize(&self) -> &str {
+        strings().get(self)
+    }
 }

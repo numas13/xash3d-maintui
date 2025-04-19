@@ -15,10 +15,14 @@ use xash3d_ui::{engine, utils::escape_command};
 use crate::{
     config_list::{Button, ConfigBackend, ConfigEntry, ConfigItem, ConfigList},
     input::KeyEvent,
-    strings::{self, strings},
+    strings::Localize,
     ui::{Control, Menu, Screen},
     widgets::{Checkbox, Input, ListPopup},
 };
+
+mod i18n {
+    pub use crate::i18n::menu::create_server::*;
+}
 
 const CVAR_HOST_SERVERSTATE: &CStr = c"host_serverstate";
 const CVAR_HOSTNAME: &CStr = c"hostname";
@@ -36,8 +40,8 @@ struct Map {
 fn parse_map_list(s: &str) -> Result<Vec<Map>, ParseError> {
     let mut list = Vec::new();
     list.push(Map {
-        name: String::from(strings::get("#GameUI_RandomMap")),
-        title: String::from("No Title"),
+        name: i18n::RANDOM_MAP.localize().to_string(),
+        title: i18n::RANDOM_MAP_TITLE.localize().to_string(),
     });
     let mut tokens = Tokens::new(s);
     while let Some(name) = tokens.next() {
@@ -177,7 +181,7 @@ impl CreateServer {
 
     fn start_button(self: &Rc<Self>) -> impl ConfigItem {
         let create_server = self.clone();
-        Button::new("Start", move || {
+        Button::new(i18n::START_BUTTON.localize(), move || {
             create_server.start();
             Control::BackMainHide
         })
@@ -195,7 +199,7 @@ impl CreateServer {
             }
         }
         ConfigEntry::builder(Input::new())
-            .label(strings::get("#GameUI_ServerName"))
+            .label(i18n::NAME_LABEL.localize())
             .build(ServerName(self.clone()))
     }
 
@@ -212,7 +216,7 @@ impl CreateServer {
         }
         let widget = Input::builder().password().build();
         ConfigEntry::builder(widget)
-            .label(strings::get("#GameUI_Password"))
+            .label(i18n::PASSWORD_LABEL.localize())
             .build(Password(self.clone()))
     }
 
@@ -227,8 +231,9 @@ impl CreateServer {
                 self.0.parms.borrow_mut().map_index = value;
             }
         }
+        let title = i18n::MAPS_TITLE.localize();
         let maps = self.maps.iter().map(|i| i.name.as_str());
-        let widget = ListPopup::new(strings::get("#GameUI_Map"), maps);
+        let widget = ListPopup::new(title, maps);
         ConfigEntry::builder(widget).build(MapList(self.clone()))
     }
 
@@ -244,8 +249,8 @@ impl CreateServer {
             }
         }
         ConfigEntry::builder(Checkbox::new())
-            .label("NAT")
-            .hint("Use NAT Bypass instead of direct mode")
+            .label(i18n::NAT_LABEL.localize())
+            .hint(i18n::NAT_HINT.localize())
             .build(B(self.clone()))
     }
 
@@ -260,8 +265,9 @@ impl CreateServer {
                 self.0.parms.borrow_mut().max_players = value as u32 + 1;
             }
         }
+        let title = i18n::MAX_PLAYERS_TITLE.localize();
         let items = (1..=32).map(|i| i.to_string());
-        let widget = ListPopup::new(strings::get("#GameUI_MaxPlayers"), items);
+        let widget = ListPopup::new(title, items);
         ConfigEntry::builder(widget).build(B(self.clone()))
     }
 }
@@ -272,8 +278,7 @@ pub struct CreateServerMenu {
 
 impl CreateServerMenu {
     pub fn new() -> Self {
-        let strings = strings();
-        let mut list = ConfigList::with_back(strings.get("#GameUI_GameMenu_CreateServer"));
+        let mut list = ConfigList::with_back(i18n::TITLE.localize());
 
         let server = CreateServer::new();
         list.add(server.start_button());

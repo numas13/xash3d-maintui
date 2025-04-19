@@ -4,8 +4,13 @@ use xash3d_ratatui::XashBackend;
 use crate::{
     config_list::ConfigList,
     input::KeyEvent,
+    strings::Localize,
     ui::{Control, Menu, Screen},
 };
+
+mod i18n {
+    pub use crate::i18n::menu::config_audio::*;
+}
 
 pub struct AudioConfig {
     list: ConfigList,
@@ -13,21 +18,24 @@ pub struct AudioConfig {
 
 impl AudioConfig {
     pub fn new() -> Self {
-        let mut list = ConfigList::with_back("Audio settings");
-        list.slider("Sound effects volume", c"volume");
-        list.slider("MP3 Volume", c"MP3Volume");
-        list.slider("HEV suit volume", c"suitvolume");
+        let mut list = ConfigList::with_back(i18n::TITLE.localize());
+        list.slider(i18n::SOUND_EFFECTS_VOLUME.localize(), c"volume");
+        list.slider(i18n::MP3_VOLUME.localize(), c"MP3Volume");
+        list.slider(i18n::HEV_SUIT_VOLUME.localize(), c"suitvolume");
         list.popup_list(
-            "Sound interpolation",
+            i18n::SOUND_INTERPOLATION.localize(),
             c"s_lerping",
-            ["Disable", "Balance", "Quality"],
+            [
+                i18n::SOUND_INTERPOLATION_DISABLE.localize(),
+                i18n::SOUND_INTERPOLATION_BALANCE.localize(),
+                i18n::SOUND_INTERPOLATION_QUALITY.localize(),
+            ],
         );
-        list.checkbox("Mute when inactive", c"snd_mute_losefocus");
-        list.checkbox("Disable DSP effects", c"room_off");
-        list.checkbox("Use Alpha DSP effects", c"dsp_coeff_table");
-        list.checkbox("Enable vibration", c"vibration_enable");
-        list.slider("Vibration", c"vibration_length");
-
+        list.checkbox(i18n::MUTE_INACTIVE.localize(), c"snd_mute_losefocus");
+        list.checkbox(i18n::DISABLE_DSP_EFFECTS.localize(), c"room_off");
+        list.checkbox(i18n::ALPHA_DSP_EFFECTS.localize(), c"dsp_coeff_table");
+        list.checkbox(i18n::ENABLE_VIBRATION.localize(), c"vibration_enable");
+        list.slider(i18n::VIBRATION.localize(), c"vibration_length");
         Self { list }
     }
 }

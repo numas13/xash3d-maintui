@@ -7,30 +7,35 @@ use xash3d_ui::{engine, globals};
 use crate::{
     input::{Key, KeyEvent},
     menu::{self, define_menu_items},
+    strings::Localize,
     ui::{utils, Control, Menu, Screen, State},
     widgets::{ConfirmPopup, ConfirmResult, List, ListPopup, SelectResult, WidgetMut},
 };
 
-define_menu_items! {
-    MENU_CONSOLE = "#GameUI_Console", "Show console.";
-    MENU_DISCONNECT = "#GameUI_GameMenu_Disconnect", "Disconnect from server.";
-    MENU_RESUME_GAME = "#GameUI_GameMenu_ResumeGame", "Return to game.";
-    MENU_NEW_GAME = "#GameUI_GameMenu_NewGame", "#GameUI_MainMenu_Hint_NewGame";
-    MENU_NEW_GAME_DEMO = "#GameUI_GameMenu_PlayDemo", "Start a demo chapter.";
-    MENU_HAZARD_COURSE = "#GameUI_TrainingRoom", "";
-    MENU_LOAD_GAME = "#GameUI_GameMenu_LoadGame", "#GameUI_MainMenu_Hint_LoadGame";
-    MENU_SAVE_GAME = "#GameUI_GameMenu_SaveGame", "Save current game.";
-    MENU_OPTIONS = "#GameUI_GameMenu_Options", "#GameUI_MainMenu_Hint_Configuration";
-    MENU_INTERNET = "Internet servers", "Search for online multiplayer servers on the internet.";
-    MENU_LAN = "LAN servers", "Search for online multiplayer servers on the locale area network.";
-    MENU_TEST_MENU = "Test menu", "Test menu.";
-    MENU_QUIT = "#GameUI_GameMenu_Quit", "#GameUI_MainMenu_Hint_QuitGame";
+mod i18n {
+    pub use crate::i18n::{all::*, menu::main::*};
 }
 
-const SKILL_CANCEL: &str = "Cancel";
-const SKILL_EASY: &str = "#GameUI_Easy";
-const SKILL_NORMAL: &str = "#GameUI_Medium";
-const SKILL_HARD: &str = "#GameUI_Hard";
+define_menu_items! {
+    MENU_CONSOLE = i18n::CONSOLE, i18n::CONSOLE_HINT;
+    MENU_DISCONNECT = i18n::DISCONNECT, i18n::DISCONNECT_HINT;
+    MENU_RESUME_GAME = i18n::RESUME_GAME, i18n::RESUME_GAME_HINT;
+    MENU_NEW_GAME = i18n::NEW_GAME, i18n::NEW_GAME_HINT;
+    MENU_NEW_GAME_DEMO = i18n::NEW_GAME_DEMO, i18n::NEW_GAME_DEMO_HINT;
+    MENU_HAZARD_COURSE = i18n::HAZARD_COURSE, ""; // manually created
+    MENU_LOAD_GAME = i18n::LOAD_GAME, i18n::LOAD_GAME_HINT;
+    MENU_SAVE_GAME = i18n::SAVE_GAME, i18n::SAVE_GAME_HINT;
+    MENU_OPTIONS = i18n::OPTIONS, i18n::OPTIONS_HINT;
+    MENU_INTERNET = i18n::INTERNET, i18n::INTERNET_HINT;
+    MENU_LAN = i18n::LAN, i18n::LAN_HINT;
+    MENU_TEST_MENU = "Test", "";
+    MENU_QUIT = i18n::QUIT, i18n::QUIT_HINT;
+}
+
+const SKILL_CANCEL: &str = i18n::CANCEL;
+const SKILL_EASY: &str = i18n::SKILL_EASY;
+const SKILL_NORMAL: &str = i18n::SKILL_NORMAL;
+const SKILL_HARD: &str = i18n::SKILL_HARD;
 
 #[derive(Copy, Clone, Default, PartialEq, Eq)]
 enum Focus {
@@ -51,6 +56,7 @@ pub struct MainMenu {
     is_single: bool,
     developer: c_int,
     hint_hazard_course: String,
+    game_title: String,
 }
 
 impl MainMenu {
@@ -58,6 +64,8 @@ impl MainMenu {
         let engine = engine();
         let info = engine.get_game_info_2().unwrap();
         let has_demo = engine.is_map_valid(&info.demomap);
+        let title = info.title.to_str().unwrap_or("<invalid utf8>");
+        let hint_hazard_course = i18n::HAZARD_COURSE_HINT.localize().replace("{title}", title);
 
         let mut menu = List::empty();
         menu.set_bindings([
@@ -80,16 +88,17 @@ impl MainMenu {
             state: State::default(),
             menu,
             skill_popup: ListPopup::new(
-                "#GameUI_Difficulty",
+                i18n::DIFFICULTY.localize(),
                 [SKILL_CANCEL, SKILL_EASY, SKILL_NORMAL, SKILL_HARD],
             ),
-            disconnect_popup: ConfirmPopup::new("Do you want to disconnect?"),
+            disconnect_popup: ConfirmPopup::new(i18n::DISCONNECT_POPUP.localize()),
             has_demo,
             start_demo: false,
             is_client_active: false,
             is_single: false,
             developer: -1,
-            hint_hazard_course: format!("Learn how to play {}.", info.title),
+            hint_hazard_course,
+            game_title: info.title.to_string(),
         }
     }
 
@@ -170,7 +179,7 @@ impl MainMenu {
     fn draw_menu(&mut self, area: Rect, buf: &mut Buffer, screen: &Screen) {
         self.update_menu_items();
         let len = self.menu.len();
-        let area = utils::menu_block("Half-Life", area, buf);
+        let area = utils::menu_block(&self.game_title, area, buf);
         let area = utils::render_hint(area, buf, len, self.get_menu_hint());
         self.menu.render(area, buf, screen);
     }

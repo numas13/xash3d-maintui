@@ -17,33 +17,37 @@ use xash3d_ui::engine;
 
 use crate::{
     input::{Key, KeyEvent},
-    strings::strings,
+    strings::{self, Localize},
     ui::{utils, Control, Menu, Screen, State},
     widgets::{InputPopup, InputResult, List, ListPopup, MyTable, SelectResult, WidgetMut},
 };
 
 use super::create_server::CreateServerMenu;
 
+mod i18n {
+    pub use crate::i18n::{all::*, menu::browser::*};
+}
+
 const DEFAULT_PORT: u16 = 27015;
 
 const FAVORITE_SERVERS_PATH: &str = "favorite_servers.lst";
 // const HISTORY_SERVERS_PATH: &str = "history_servers.lst";
 
-const MENU_BACK: &str = "Back";
-const MENU_CREATE_SERVER: &str = "#GameUI_GameMenu_CreateServer";
-const MENU_ADD_FAVORITE: &str = "Add favorite server";
-const MENU_REFRESH: &str = "Refresh";
-const MENU_SORT: &str = "Sort";
+const MENU_BACK: &str = i18n::BACK;
+const MENU_CREATE_SERVER: &str = i18n::CREATE_SERVER;
+const MENU_ADD_FAVORITE: &str = i18n::ADD_FAVORITE;
+const MENU_REFRESH: &str = i18n::REFRESH;
+const MENU_SORT: &str = i18n::SORT;
 
-const SORT_PING: &str = "Ping";
-const SORT_NUMCL: &str = "#GameUI_CurrentPlayers";
-const SORT_HOST: &str = "#GameUI_ServerName";
-const SORT_MAP: &str = "#GameUI_Map";
+const SORT_PING: &str = i18n::SORT_PING;
+const SORT_NUMCL: &str = i18n::SORT_NUMCL;
+const SORT_HOST: &str = i18n::SORT_HOST;
+const SORT_MAP: &str = i18n::SORT_MAP;
 
-const PROTOCOL_CANCEL: &str = "Cancel";
-const PROTOCOL_XASH3D_49: &str = "Xash3D 49 (new)";
-const PROTOCOL_XASH3D_48: &str = "Xash3D 48 (old)";
-const PROTOCOL_GOLD_SOURCE_48: &str = "GoldSource 48";
+const PROTOCOL_CANCEL: &str = i18n::CANCEL;
+const PROTOCOL_XASH3D_49: &str = i18n::PROTOCOL_XASH3D_49;
+const PROTOCOL_XASH3D_48: &str = i18n::PROTOCOL_XASH3D_48;
+const PROTOCOL_GOLD_SOURCE_48: &str = i18n::PROTOCOL_GOLD_SOURCE_48;
 
 #[derive(Copy, Clone, Default, PartialEq, Eq)]
 enum SortBy {
@@ -315,9 +319,9 @@ impl Tab {
 
     fn as_str(&self) -> &str {
         match self {
-            Self::Direct => "Direct",
-            Self::Favorite => "Favorite",
-            Self::Nat => "NAT",
+            Self::Direct => i18n::TAB_DIRECT,
+            Self::Favorite => i18n::TAB_FAVORITE,
+            Self::Nat => i18n::TAB_NAT,
         }
     }
 }
@@ -380,10 +384,10 @@ impl Browser {
             sort_by: SortBy::default(),
             sort_reverse: false,
             sort_popup: ListPopup::new(
-                "Select sort column",
+                i18n::SORT_TITLE,
                 [SORT_PING, SORT_NUMCL, SORT_HOST, SORT_MAP],
             ),
-            password_popup: InputPopup::new_password("Password:"),
+            password_popup: InputPopup::new_password(i18n::PASSWORD_LABEL),
             tab: Tab::default(),
             table: MyTable::new_first(),
             tabs: [
@@ -392,9 +396,9 @@ impl Browser {
                 (Tab::Nat, Rect::ZERO),
             ],
             favorite_servers,
-            address_popup: InputPopup::new_text("Address:"),
+            address_popup: InputPopup::new_text(i18n::ADDRESS_LABEL),
             protocol_popup: ListPopup::new(
-                "Select protocol",
+                i18n::PROTOCOL_TITLE,
                 [
                     PROTOCOL_CANCEL,
                     PROTOCOL_XASH3D_49,
@@ -584,7 +588,7 @@ impl Browser {
             } else if *tab == self.tab {
                 style = style.black().on_green();
             }
-            Line::raw(tab.as_str())
+            Line::raw(tab.as_str().localize())
                 .style(style)
                 .centered()
                 .render(*area, buf);
@@ -601,6 +605,7 @@ impl Browser {
             Constraint::Max(7),
         ];
         let sort_hint = |s, e: SortBy| {
+            let s = strings::get(s);
             if self.sort_by == e {
                 let p = if self.sort_reverse { "↑" } else { "↓" };
                 Cell::new(Line::from_iter([p, s]))
@@ -608,14 +613,13 @@ impl Browser {
                 Cell::new(s)
             }
         };
-        let strings = strings();
         let header = Row::new([
             Cell::new(""),
-            sort_hint(strings.get("#GameUI_ServerName"), SortBy::Host),
-            sort_hint(strings.get("#GameUI_Map"), SortBy::Map),
+            sort_hint(i18n::COLUMN_HOST, SortBy::Host),
+            sort_hint(i18n::COLUMN_MAP, SortBy::Map),
             Cell::new(""),
-            sort_hint("Players", SortBy::Numcl),
-            sort_hint("Ping", SortBy::Ping),
+            sort_hint(i18n::COLUMN_PLAYES, SortBy::Numcl),
+            sort_hint(i18n::COLUMN_PING, SortBy::Ping),
         ]);
         let table = self
             .table
@@ -783,9 +787,9 @@ impl Menu for Browser {
         }
 
         let title = if self.is_lan {
-            "Local servers"
+            i18n::TITLE_LOCAL
         } else {
-            "Internet servers"
+            i18n::TITLE_INTERNET
         };
         let [menu_area, table_area] = Layout::vertical([
             Constraint::Length(self.menu.len() as u16 + 1),

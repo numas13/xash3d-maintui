@@ -1,0 +1,9 @@
+[package]
+name = "main"
+version = "0.1.0"
+license = "LGPL-3.0-only"
+edition = "2021"
+
+[[bin]]
+name = "i18n-skeleton"
+path = "i18n-skeleton.rs"

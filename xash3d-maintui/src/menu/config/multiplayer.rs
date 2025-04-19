@@ -15,13 +15,17 @@ use xash3d_ui::{engine, picture::Picture, raw::HIMAGE};
 use crate::{
     config_list::{ConfigBackend, ConfigEntry, ConfigList},
     input::KeyEvent,
-    strings::{self, strings},
+    strings::Localize,
     ui::{
         utils::{self, is_wide},
         Control, Menu, Screen,
     },
     widgets::{Image, Slider, WidgetMut},
 };
+
+mod i18n {
+    pub use crate::i18n::menu::config_multiplayer::*;
+}
 
 const CL_LOGOFILE: &CStr = c"cl_logofile";
 const CL_LOGOCOLOR: &CStr = c"cl_logocolor";
@@ -98,7 +102,7 @@ struct LogoColor {
 impl LogoColor {
     fn new(name: &str, value: &'static CStr, colors: &'static [RGBA]) -> Self {
         Self {
-            name: strings::get(name).to_string(),
+            name: name.localize().to_string(),
             value,
             colors,
         }
@@ -380,62 +384,58 @@ pub struct MultiplayerConfig {
 
 impl MultiplayerConfig {
     pub fn new() -> Self {
-        let strings = strings();
-        let mut list = ConfigList::with_back("Multiplayer settings");
+        let mut list = ConfigList::with_back(i18n::TITLE.localize());
 
         list.add(
             ConfigEntry::input()
-                .label(strings.get("#GameUI_PlayerName"))
-                .hint("Change the player name.")
+                .label(i18n::PLAYER_NAME.localize())
+                .hint(i18n::PLAERY_NAME_HINT.localize())
                 .build(PlayerName),
         );
 
         let logo = Rc::new(Logo::new());
         logo.update_preview();
         list.add(
-            ConfigEntry::list("Select logo", logo.names())
-                .label("Logo")
-                .hint("Change the player logo.")
+            ConfigEntry::list(i18n::LOGO_TITLE.localize(), logo.names())
+                .label(i18n::LOGO_LABEL.localize())
+                .hint(i18n::LOGO_HINT.localize())
                 .build(LogoConfig(logo.clone())),
         );
 
         list.add(
-            ConfigEntry::list("Select color", logo.colors())
-                .label("Logo color")
-                .hint("Change the color of player logo.")
+            ConfigEntry::list(i18n::COLOR_TITLE.localize(), logo.colors())
+                .label(i18n::COLOR_LABEL.localize())
+                .hint(i18n::COLOR_HINT.localize())
                 .build(LogoColorConfig(logo.clone())),
         );
 
         let model = Rc::new(Model::new());
         model.update_preview();
         list.add(
-            ConfigEntry::list("Select model", &model.names)
-                .label("Player model")
-                .hint("Change the player model.")
+            ConfigEntry::list(i18n::MODEL_TITLE.localize(), &model.names)
+                .label(i18n::MODEL_LABEL.localize())
+                .hint(i18n::MODEL_HINT.localize())
                 .build(ModelConfig(model.clone())),
         );
 
-        let top_color = (c"topcolor", "Top color");
-        let bottom_color = (c"bottomcolor", "Bottom color");
-        for (name, label) in [top_color, bottom_color] {
+        let top_color = (c"topcolor", i18n::TOP_COLOR, i18n::TOP_COLOR_HINT);
+        let bottom_color = (c"bottomcolor", i18n::BOTTOM_COLOR, i18n::BOTTOM_COLOR_HINT);
+        for (name, label, hint) in [top_color, bottom_color] {
             let widget = Slider::builder().max(255.0).step(1.0).build();
-            let hint = format!("Change the {} of player model.", label.to_lowercase());
-            let entry =
-                ConfigEntry::builder(widget)
-                    .label(label)
-                    .hint(hint)
-                    .build(ModelColorConfig {
-                        name,
-                        model: model.clone(),
-                    });
+            let entry = ConfigEntry::builder(widget)
+                .label(label.localize())
+                .hint(hint.localize())
+                .build(ModelColorConfig {
+                    name,
+                    model: model.clone(),
+                });
             list.add(entry)
         }
 
         list.add({
-            let s = strings.get("#GameUI_HighModels");
             ConfigEntry::checkbox()
-                .label(s)
-                .hint(format!("{s}."))
+                .label(i18n::HIGH_MODELS.localize())
+                .hint(i18n::HIGH_MODELS_HINT.localize())
                 .build_for_cvar(c"cl_himodels")
         });
 
@@ -462,12 +462,12 @@ impl Menu for MultiplayerConfig {
         };
         let [logo_area, model_area] = layout.areas(images_area);
 
-        let logo_area = utils::main_block("Logo", logo_area, buf);
+        let logo_area = utils::main_block(i18n::LOGO_LABEL, logo_area, buf);
         if let Some(preview) = self.logo.preview.borrow().as_ref() {
             Image::with_color(preview.pic.raw(), preview.color).render(logo_area, buf, screen);
         }
 
-        let model_area = utils::main_block("Model", model_area, buf);
+        let model_area = utils::main_block(i18n::MODEL_LABEL, model_area, buf);
         if let Some(preview) = self.model.preview.borrow().as_ref() {
             Image::new(preview.pic).render(model_area, buf, screen);
         } else if let Ok(name) = self.model.get_model_name().to_str() {

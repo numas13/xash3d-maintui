@@ -16,17 +16,21 @@ use xash3d_ui::engine;
 
 use crate::{
     input::{Key, KeyEvent},
-    strings,
+    strings::Localize,
     ui::{sound, utils, Control, Menu, Screen, State},
     widgets::{
         ConfirmPopup, ConfirmResult, Image, List, ListPopup, MyTable, SelectResult, WidgetMut,
     },
 };
 
-const MENU_BACK: &str = "Back";
+mod i18n {
+    pub use crate::i18n::{all::*, menu::save::*};
+}
 
-const CONTEXT_CANCEL: &str = "Cancel";
-const CONTEXT_DELETE: &str = "Delete";
+const MENU_BACK: &str = i18n::BACK;
+
+const CONTEXT_CANCEL: &str = i18n::CANCEL;
+const CONTEXT_DELETE: &str = i18n::DELETE_SAVE;
 
 #[derive(Copy, Clone, Default, PartialEq, Eq)]
 enum Focus {
@@ -71,13 +75,21 @@ impl SavesMenu {
     pub fn new(is_save: bool) -> Self {
         let mut menu = List::new([MENU_BACK]);
         menu.set_bindings([(Key::Char(b'b'), MENU_BACK)]);
+        let delete_popup = ConfirmPopup::with_title(
+            i18n::DELETE_POPUP_TITLE.localize(),
+            i18n::DELETE_POPUP_BODY.localize(),
+        );
+        let context_menu = ListPopup::new(
+            i18n::CONTEXT_TITLE.localize(),
+            [CONTEXT_CANCEL, CONTEXT_DELETE],
+        );
         Self {
             state: State::default(),
             menu,
             table: MyTable::new_first(),
             is_save,
-            delete_popup: ConfirmPopup::new("Do you want to delete save?"),
-            context_menu: ListPopup::new("Save", [CONTEXT_CANCEL, CONTEXT_DELETE]),
+            delete_popup,
+            context_menu,
             preview: None,
         }
     }
@@ -88,8 +100,8 @@ impl SavesMenu {
         if self.is_save {
             self.table.push(SaveInfo {
                 filename: String::from("new"),
-                comment: String::from("New saved game"),
-                datetime: String::from("Now"),
+                comment: i18n::NEW_SAVE.localize().to_string(),
+                datetime: i18n::NOW.localize().to_string(),
             });
         }
 
@@ -131,7 +143,7 @@ impl SavesMenu {
                 title.len() - i.unwrap_or(0)
             };
             if let Ok(s) = str::from_utf8(&title[..end]) {
-                comment.push_str(strings::get(s));
+                comment.push_str(s.localize());
             }
 
             let mut datetime = String::new();
@@ -214,7 +226,7 @@ impl SavesMenu {
     }
 
     fn draw_table(&mut self, area: Rect, buf: &mut Buffer) {
-        let header = Row::new(["Time", "Game"]);
+        let header = Row::new([i18n::TIME.localize(), i18n::SAVE_COMMENT.localize()]);
         let table = Table::default()
             .header(header.style(Style::new().bold()))
             .widths([Constraint::Length(18), Constraint::Min(20)]);
@@ -223,7 +235,7 @@ impl SavesMenu {
         self.table.draw(area, buf, table, focused, |i| {
             let cells = [
                 Cell::new(i.datetime.as_str()),
-                Cell::new(i.comment.as_str()),
+                Cell::new(i.comment.as_str().localize()),
             ];
             Some(Row::new(cells))
         });
@@ -231,7 +243,7 @@ impl SavesMenu {
 
     fn draw_preview(&mut self, area: Rect, buf: &mut Buffer, screen: &Screen) {
         let block = Block::new()
-            .title("Save preview")
+            .title(i18n::SAVE_PREVIEW.localize())
             .borders(Borders::TOP)
             .border_style(utils::main_block_border_style());
         let inner_area = block.inner(area);
@@ -260,7 +272,11 @@ impl Menu for SavesMenu {
     }
 
     fn draw(&mut self, area: Rect, buf: &mut Buffer, screen: &Screen) {
-        let title = if self.is_save { "Save" } else { "Load" };
+        let title = if self.is_save {
+            i18n::TITLE_SAVE
+        } else {
+            i18n::TITLE_LOAD
+        };
         let inner_area = utils::main_block(title, area, buf);
         let [menu_area, table_area, preview_area] = Layout::vertical([
             Constraint::Length(self.menu.len() as u16 + 1),

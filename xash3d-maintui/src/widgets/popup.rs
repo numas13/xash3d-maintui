@@ -2,6 +2,7 @@ use ratatui::{
     prelude::*,
     widgets::{Paragraph, Wrap},
 };
+use unicode_width::UnicodeWidthStr;
 use xash3d_ratatui::XashBackend;
 
 use crate::{
@@ -21,28 +22,32 @@ pub struct ConfirmPopup {
     state: State<Focus>,
     cancel: Button,
     yes: Button,
+    title: String,
     content: String,
 }
 
 impl ConfirmPopup {
-    pub fn new(content: impl ToString) -> Self {
-        let mut content = content.to_string();
-        content.push_str(" (y/n)");
+    pub fn with_title(title: impl ToString, content: impl ToString) -> Self {
         Self {
             state: Default::default(),
             cancel: Button::cancel(),
             yes: Button::yes(),
-            content,
+            title: title.to_string(),
+            content: content.to_string(),
         }
+    }
+
+    pub fn new(content: impl ToString) -> Self {
+        Self::with_title("Y/N", content)
     }
 }
 
 impl WidgetMut<ConfirmResult> for ConfirmPopup {
     fn render(&mut self, area: Rect, buf: &mut Buffer, _: &Screen) {
-        let width = 2 + self.content.len() as u16;
+        let width = 2 + self.content.width() as u16;
         let area = utils::centered_rect_fixed(width, 4, area);
 
-        let block = utils::popup_block("Y/N");
+        let block = utils::popup_block(&self.title);
         let inner_area = block.inner(area);
         block.render(area, buf);
 

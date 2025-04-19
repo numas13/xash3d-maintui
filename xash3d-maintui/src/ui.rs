@@ -19,8 +19,9 @@ use xash3d_utils::macros::unimpl;
 
 use crate::{
     export::{Api, MenuApi, UiFunctions, UiFunctionsExtended},
+    i18n,
     input::{Key, KeyEvent, Modifier},
-    strings,
+    strings::{self, strings},
     widgets::{ConfirmPopup, ConfirmResult, WidgetMut},
 };
 
@@ -113,6 +114,11 @@ impl Ui {
         engine().add_command(c"fg", Some(cmd_fg));
 
         strings::init();
+        let strings = strings();
+        let quit_popup = ConfirmPopup::with_title(
+            strings.get(i18n::all::QUIT_POPUP_TITLE),
+            strings.get(i18n::all::QUIT_POPUP_BODY),
+        );
 
         Ui {
             history: vec![crate::menu::main()],
@@ -124,7 +130,7 @@ impl Ui {
             touch_start: 0.0,
             touch: Touch::Stop,
             emulated_wheel: None,
-            quit_popup: ConfirmPopup::new("Do you want to exit?"),
+            quit_popup,
         }
     }
 

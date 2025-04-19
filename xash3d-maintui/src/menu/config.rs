@@ -19,18 +19,22 @@ use crate::{
     widgets::{List, WidgetMut},
 };
 
+mod i18n {
+    pub use crate::i18n::{all::*, menu::config::*};
+}
+
 define_menu_items! {
-    MENU_KEYBOARD = "Keyboard", "Change keyboard settings.";
-    MENU_GAMEPAD = "Gamepad", "Change gamepad settings.";
-    MENU_MOUSE = "Mouse", "Change mouse settings.";
-    MENU_GAME = "Game", "Change game settings.";
-    MENU_MULTIPLAYER = "Multiplayer", "Change multiplayer settings.";
-    MENU_AUDIO = "Audio", "Change audio settings.";
-    MENU_VOICE = "Voice", "Change voice settings.";
-    MENU_VIDEO = "Video", "Change video settings.";
-    MENU_NETWORK = "Network", "Change network settings.";
-    MENU_TOUCH_BUTTONS = "Touch buttons", "Change touch buttons.";
-    MENU_BACK = "Back", "Go back to the Main menu.";
+    MENU_KEYBOARD = i18n::KEYBOARD, i18n::KEYBOARD_HINT;
+    MENU_GAMEPAD = i18n::GAMEPAD, i18n::GAMEPAD_HINT;
+    MENU_MOUSE = i18n::MOUSE, i18n::MOUSE_HINT;
+    MENU_GAME = i18n::GAME, i18n::GAME_HINT;
+    MENU_MULTIPLAYER = i18n::MULTIPLAYER, i18n::MULTIPLAYER_HINT;
+    MENU_AUDIO = i18n::AUDIO, i18n::AUDIO_HINT;
+    MENU_VOICE = i18n::VOICE, i18n::VOICE_HINT;
+    MENU_VIDEO = i18n::VIDEO, i18n::VIDEO_HINT;
+    MENU_NETWORK = i18n::NETWORK, i18n::NETWORK_HINT;
+    MENU_TOUCH_BUTTONS = i18n::TOUCH_BUTTONS, i18n::TOUCH_BUTTONS_HINT;
+    MENU_BACK = i18n::BACK, i18n::BACK_HINT;
 }
 
 pub struct ConfigMenu {
@@ -94,7 +98,7 @@ impl ConfigMenu {
 
 impl Menu for ConfigMenu {
     fn draw(&mut self, area: Rect, buf: &mut Buffer, screen: &Screen) {
-        let area = utils::menu_block("Settings", area, buf);
+        let area = utils::menu_block(i18n::TITLE, area, buf);
         let len = self.menu.len();
         let area = utils::render_hint(area, buf, len, self.get_menu_hint());
         self.menu.render(area, buf, screen);

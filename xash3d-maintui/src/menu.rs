@@ -12,13 +12,9 @@ macro_rules! define_menu_items {
         fn get_menu_hint(item: &str) -> Option<&'static str> {
             let hint = match item {
                 $($name => $hint,)*
-                _ => "",
+                _ => return None,
             };
-            if !hint.is_empty() {
-                $crate::strings::try_get(hint)
-            } else {
-                None
-            }
+            Some($crate::strings::get(hint))
         }
     };
 }

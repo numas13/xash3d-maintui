@@ -4,9 +4,13 @@ use xash3d_ratatui::XashBackend;
 use crate::{
     config_list::ConfigList,
     input::KeyEvent,
-    strings::strings,
+    strings::Localize,
     ui::{Control, Menu, Screen},
 };
+
+mod i18n {
+    pub use crate::i18n::menu::config_voice::*;
+}
 
 pub struct VoiceConfig {
     list: ConfigList,
@@ -14,16 +18,15 @@ pub struct VoiceConfig {
 
 impl VoiceConfig {
     pub fn new() -> Self {
-        let strings = strings();
-        let l = |s| strings.get(s);
-        let mut list = ConfigList::with_back("Voice settings");
-
-        list.checkbox(l("#GameUI_EnableVoice"), c"voice_modenable");
-        list.slider(l("#GameUI_VoiceTransmitVolume"), c"voice_transmit_scale");
-        list.slider(l("#GameUI_VoiceReceiveVolume"), c"voice_scale");
+        let mut list = ConfigList::with_back(i18n::TITLE.localize());
+        list.checkbox(i18n::ENABLE_VOICE.localize(), c"voice_modenable");
+        list.slider(
+            i18n::VOICE_TRANSMIT_VOLUME.localize(),
+            c"voice_transmit_scale",
+        );
+        list.slider(i18n::VOICE_RECEIVE_VOLUME.localize(), c"voice_scale");
         list.label("* Uses Opus Codec.");
         list.label("* Open, royalty-free, highly versatile audio codec.");
-
         Self { list }
     }
 }

@@ -1,6 +1,7 @@
 use std::ffi::CStr;
 
 use ratatui::prelude::*;
+use unicode_width::UnicodeWidthStr;
 use xash3d_ratatui::XashBackend;
 use xash3d_ui::engine::CVar;
 
@@ -355,7 +356,7 @@ impl ConfigItem for ConfigEntry<usize, ListPopup> {
         Line::raw(value).style(style).render(area, buf);
 
         if let Some(note) = &self.note {
-            let width = note.len() as u16;
+            let width = note.width() as u16;
             if value.len() as u16 + width < area.width {
                 let note_area = Rect {
                     x: area.right() - width,

@@ -12,9 +12,14 @@ use xash3d_ui::engine;
 use crate::{
     config_list::{ConfigBackend, ConfigEntry, ConfigList},
     input::KeyEvent,
+    strings::Localize,
     ui::{Control, Menu, Screen},
     widgets::ListPopup,
 };
+
+mod i18n {
+    pub use crate::i18n::menu::config_gamepad::*;
+}
 
 struct JoySlider {
     name: &'static CStr,
@@ -81,16 +86,23 @@ impl ConfigBackend<bool> for JoyInvertBackend {
     }
 }
 
-fn joy_slider(list: &mut ConfigList, label: &str, cvar: &'static CStr, max: f32, step: f32) {
+fn joy_slider(
+    list: &mut ConfigList,
+    label: &str,
+    label_invert: &str,
+    cvar: &'static CStr,
+    max: f32,
+    step: f32,
+) {
     let joy = JoySlider::new(cvar);
     list.add(
         ConfigEntry::slider(0.0, max, step)
-            .label(label)
+            .label(label.localize())
             .build(joy.slider()),
     );
     list.add(
         ConfigEntry::checkbox()
-            .label(format!("{label} invert"))
+            .label(label_invert.localize())
             .build(joy.invert()),
     );
 }
@@ -111,13 +123,13 @@ enum Axis {
 impl Axis {
     fn name(&self) -> &'static str {
         match self {
-            Self::None => "NOT BOUND",
-            Self::Side => "Side",
-            Self::Forward => "Forward",
-            Self::Yaw => "Yaw",
-            Self::Pitch => "Pitch",
-            Self::LeftTrigger => "Left Trigger",
-            Self::RightTrigger => "Right Trigger",
+            Self::None => i18n::AXIS_NONE,
+            Self::Side => i18n::AXIS_SIDE,
+            Self::Forward => i18n::AXIS_FORWARD,
+            Self::Yaw => i18n::AXIS_YAW,
+            Self::Pitch => i18n::AXIS_PITCH,
+            Self::LeftTrigger => i18n::AXIS_LEFT_TRIGGER,
+            Self::RightTrigger => i18n::AXIS_RIGHT_TRIGGER,
         }
     }
 
@@ -134,7 +146,7 @@ impl Axis {
     }
 
     fn names() -> impl Iterator<Item = &'static str> {
-        Self::all().iter().map(Self::name)
+        Self::all().iter().map(|i| i.name().localize())
     }
 }
 
@@ -219,7 +231,8 @@ impl AxisBindingMap {
                 self.map.set(self.index, Axis::all()[value]);
             }
         }
-        ConfigEntry::list(format!("Axis {index}"), Axis::names()).build(B {
+        let label = format!("{} {index}", i18n::AXIS.localize());
+        ConfigEntry::list(label, Axis::names()).build(B {
             map: self.clone(),
             index,
         })
@@ -232,16 +245,44 @@ pub struct GamepadConfig {
 
 impl GamepadConfig {
     pub fn new() -> Self {
-        let mut list = ConfigList::with_back("Gamepad settings");
+        let mut list = ConfigList::with_back(i18n::TITLE.localize());
 
-        list.checkbox("Builtin on-screen keyboard", c"osk_enable");
+        list.checkbox(i18n::OSC.localize(), c"osk_enable");
 
-        joy_slider(&mut list, "Side", c"joy_side", 1.0, 0.1);
-        joy_slider(&mut list, "Forward", c"joy_forward", 1.0, 0.1);
-        joy_slider(&mut list, "Look X", c"joy_pitch", 200.0, 1.0);
-        joy_slider(&mut list, "Look Y", c"joy_yaw", 200.0, 1.0);
+        joy_slider(
+            &mut list,
+            i18n::SIDE,
+            i18n::SIDE_INVERT,
+            c"joy_side",
+            1.0,
+            0.1,
+        );
+        joy_slider(
+            &mut list,
+            i18n::FORWARD,
+            i18n::FORWARD_INVERT,
+            c"joy_forward",
+            1.0,
+            0.1,
+        );
+        joy_slider(
+            &mut list,
+            i18n::LOOK_X,
+            i18n::LOOK_X_INVERT,
+            c"joy_pitch",
+            200.0,
+            1.0,
+        );
+        joy_slider(
+            &mut list,
+            i18n::LOOK_Y,
+            i18n::LOOK_Y_INVERT,
+            c"joy_yaw",
+            200.0,
+            1.0,
+        );
 
-        list.label("# Axis binding map");
+        list.label(format!("# {}", i18n::AXIS_BINDINGS_MAP.localize()));
         let axis = AxisBindingMap::new();
         for i in 0..6 {
             list.add(axis.config_for(i));

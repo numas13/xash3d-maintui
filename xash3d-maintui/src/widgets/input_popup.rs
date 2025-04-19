@@ -3,6 +3,7 @@ use xash3d_ratatui::XashBackend;
 
 use crate::{
     input::{Key, KeyEvent},
+    strings::Localize,
     ui::{utils, Screen, State},
     widgets::{Button, ConfirmResult, Input, InputResult, WidgetMut},
 };
@@ -23,21 +24,21 @@ pub struct InputPopup {
 }
 
 impl InputPopup {
-    pub fn new(title: impl ToString, input: Input) -> Self {
+    pub fn new(title: &str, input: Input) -> Self {
         Self {
             state: Default::default(),
-            title: title.to_string(),
+            title: title.localize().to_string(),
             input,
             cancel: Button::cancel(),
             yes: Button::yes(),
         }
     }
 
-    pub fn new_text(title: impl ToString) -> Self {
+    pub fn new_text(title: &str) -> Self {
         Self::new(title, Input::builder().build())
     }
 
-    pub fn new_password(title: impl ToString) -> Self {
+    pub fn new_password(title: &str) -> Self {
         Self::new(title, Input::builder().password().build())
     }
 

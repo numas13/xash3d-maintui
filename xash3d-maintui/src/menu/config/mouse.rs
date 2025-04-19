@@ -7,9 +7,14 @@ use xash3d_ui::engine;
 use crate::{
     config_list::{ConfigBackend, ConfigEntry, ConfigList},
     input::KeyEvent,
+    strings::Localize,
     ui::{Control, Menu, Screen},
     widgets::Checkbox,
 };
+
+mod i18n {
+    pub use crate::i18n::menu::config_mouse::*;
+}
 
 struct MouseInvert;
 
@@ -17,7 +22,9 @@ impl MouseInvert {
     const M_PITCH: &'static CStr = c"m_pitch";
 
     fn config() -> ConfigEntry<bool, Checkbox> {
-        ConfigEntry::checkbox().label("Invert mouse").build(Self)
+        ConfigEntry::checkbox()
+            .label(i18n::INVERT_MOUSE.localize())
+            .build(Self)
     }
 }
 
@@ -37,7 +44,9 @@ struct MouseLook;
 
 impl MouseLook {
     fn config() -> ConfigEntry<bool, Checkbox> {
-        ConfigEntry::checkbox().label("Mouse look").build(Self)
+        ConfigEntry::checkbox()
+            .label(i18n::MOUSE_LOOK.localize())
+            .build(Self)
     }
 }
 
@@ -97,18 +106,18 @@ pub struct MouseConfig {
 
 impl MouseConfig {
     pub fn new() -> Self {
-        let mut list = ConfigList::with_back("Mouse settings");
-        list.checkbox("Crosshair", c"crosshair");
+        let mut list = ConfigList::with_back(i18n::TITLE.localize());
+        list.checkbox(i18n::CROSSHAIR.localize(), c"crosshair");
         list.add(MouseInvert::config());
         list.add(MouseLook::config());
-        list.add(Look::config("Look spring", c"lookspring"));
-        list.add(Look::config("Look strafe", c"lookstrafe"));
-        list.checkbox("Mouse filter", c"look_filter");
-        list.checkbox("Auto-Aim", c"sv_aim");
-        list.checkbox("Raw input", c"m_rawinput");
+        list.add(Look::config(i18n::LOOK_SPRING.localize(), c"lookspring"));
+        list.add(Look::config(i18n::LOOK_STRAFE.localize(), c"lookstrafe"));
+        list.checkbox(i18n::MOUSE_FILTER.localize(), c"look_filter");
+        list.checkbox(i18n::AUTO_AIM.localize(), c"sv_aim");
+        list.checkbox(i18n::RAW_INPUT.localize(), c"m_rawinput");
         list.add(
             ConfigEntry::slider(0.0, 20.0, 0.1)
-                .label("Aim sensitivity")
+                .label(i18n::AIM_SENSITIVITY.localize())
                 .build_for_cvar(c"sensitivity"),
         );
         Self { list }

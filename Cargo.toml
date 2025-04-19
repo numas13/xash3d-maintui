@@ -4,6 +4,9 @@ members = [
     "xash3d-maintui",
     "xash3d-ratatui",
 ]
+exclude = [
+    "tools",
+]
 
 [workspace.package]
 license = "LGPL-3.0-only"

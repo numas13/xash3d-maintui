@@ -5,8 +5,13 @@ use xash3d_ui::engine;
 use crate::{
     config_list::ConfigList,
     input::KeyEvent,
+    strings::Localize,
     ui::{Control, Menu, Screen},
 };
+
+mod i18n {
+    pub use crate::i18n::menu::config_game::*;
+}
 
 pub struct GameConfig {
     list: ConfigList,
@@ -14,11 +19,11 @@ pub struct GameConfig {
 
 impl GameConfig {
     pub fn new() -> Self {
-        let mut list = ConfigList::with_back("Game settings");
+        let mut list = ConfigList::with_back(i18n::TITLE.localize());
 
         let info = engine().get_game_info_2().unwrap();
         if info.gamefolder.as_c_str() == c"cstrike" {
-            list.slider("Weapon lag", c"cl_weaponlag");
+            list.slider(i18n::WEAPON_LAG.localize(), c"cl_weaponlag");
         }
 
         Self { list }

@@ -11,8 +11,13 @@ use xash3d_ui::engine;
 use crate::{
     config_list::{CVarInvert, ConfigBackend, ConfigEntry, ConfigList},
     input::KeyEvent,
+    strings::Localize,
     ui::{utils, Control, Menu, Screen},
 };
+
+mod i18n {
+    pub use crate::i18n::menu::config_video::*;
+}
 
 const FPS_VALUES: &[u16] = &[30, 60, 75, 120, 144, 244, 360, 480, 960];
 
@@ -156,30 +161,37 @@ pub struct VideoConfig {
 
 impl VideoConfig {
     pub fn new() -> Self {
-        let mut list = ConfigList::with_back("Video settings");
+        let mut list = ConfigList::with_back(i18n::TITLE.localize());
         list.add(
             ConfigEntry::slider_step(0.025)
-                .label("Gamma")
+                .label(i18n::GAMMA.localize())
                 .build(RemapCvar::new(c"gamma", [1.8, 3.0, 0.0, 1.0])),
         );
         list.add(
             ConfigEntry::slider_step(0.025)
-                .label("Brightness")
+                .label(i18n::BRIGHTNESS.localize())
                 .build(RemapCvar::new(c"brightness", [0.0, 1.0, 0.0, 3.0])),
         );
-        list.add(ConfigEntry::list("Resolution", engine().get_mode_iter()).build(VideoMode));
+        list.add(ConfigEntry::list(i18n::RESOLUTION, engine().get_mode_iter()).build(VideoMode));
         list.add(
-            ConfigEntry::list("Window Mode", ["Windowed", "Fullscreen", "Borderless"])
-                .build_for_cvar(c"fullscreen"),
+            ConfigEntry::list(
+                i18n::WINDOW_MODE.localize(),
+                [
+                    i18n::WINDOW_MODE_WINDOWED.localize(),
+                    i18n::WINDOW_MODE_FULLSCREEN.localize(),
+                    i18n::WINDOW_MODE_BORDERLESS.localize(),
+                ],
+            )
+            .build_for_cvar(c"fullscreen"),
         );
         list.add({
             let fps_values = FPS_VALUES
                 .iter()
                 .map(|i| i.to_string())
-                .chain(["Unlimited".to_string()]);
-            ConfigEntry::list("FPS limit", fps_values).build(FpsLimit)
+                .chain([i18n::FPS_UNLIMITED.localize().to_string()]);
+            ConfigEntry::list(i18n::FPS_LIMIT.localize(), fps_values).build(FpsLimit)
         });
-        list.checkbox("VSync", c"gl_vsync");
+        list.checkbox(i18n::VSYNC.localize(), c"gl_vsync");
         list.add({
             let renderers = (0..).map_while(|i| {
                 let mut name = CStrArray::new();
@@ -189,18 +201,22 @@ impl VideoConfig {
                     None
                 }
             });
-            ConfigEntry::list("Renderer", renderers)
-                .note(format!("(loaded: {})", get_loaded_renderer_name()))
+            ConfigEntry::list(i18n::RENDERER.localize(), renderers)
+                .note(format!(
+                    "({}: {})",
+                    i18n::RENDERER_NOTE.localize(),
+                    get_loaded_renderer_name()
+                ))
                 .build(Renderer)
         });
         // TODO: disable checkboxes for software renderer
-        list.checkbox("Detail textures", c"r_detailtextures");
-        list.checkbox("Use VBO", c"gl_vbo");
-        list.checkbox("Water ripples", c"r_ripple");
-        list.checkbox("Overbrights", c"gl_overbright");
+        list.checkbox(i18n::DETAIL_TEXTURES.localize(), c"r_detailtextures");
+        list.checkbox(i18n::USE_VBO.localize(), c"gl_vbo");
+        list.checkbox(i18n::WATER_RIPPLES.localize(), c"r_ripple");
+        list.checkbox(i18n::OVERBRIGHTS.localize(), c"gl_overbright");
         list.add(
             ConfigEntry::checkbox()
-                .label("Texture filtering")
+                .label(i18n::TEXTURE_FILTERING.localize())
                 .build(CVarInvert::new(c"gl_texture_nearest")),
         );
 

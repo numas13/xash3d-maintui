@@ -40,12 +40,12 @@ pub trait MenuApi<T: UiFunctions> {
     }
 
     unsafe extern "C" fn vid_init() -> c_int {
+        trace!("Ui::vid_init()");
         Self::global().vid_init()
     }
 
     unsafe extern "C" fn init() {
         trace!("Ui::init()");
-
         UI.set(RefCell::new(Ui::new())).ok();
     }
 

@@ -21,7 +21,7 @@ use crate::{
     export::{Api, MenuApi, UiFunctions, UiFunctionsExtended},
     i18n,
     input::{Key, KeyEvent, Modifier},
-    strings::{self, strings},
+    strings::{self, Localize},
     widgets::{ConfirmPopup, ConfirmResult, WidgetMut},
 };
 
@@ -99,11 +99,13 @@ pub struct Ui {
     touch_start: f32,
     touch: Touch,
     emulated_wheel: Option<Position>,
-    quit_popup: ConfirmPopup,
+    quit_popup: Option<ConfirmPopup>,
 }
 
 impl Ui {
     pub fn new() -> Ui {
+        strings::init();
+
         let backend = XashBackend::new();
         let terminal = Terminal::new(backend).expect("failed to create terminal");
 
@@ -113,15 +115,8 @@ impl Ui {
         }
         engine().add_command(c"fg", Some(cmd_fg));
 
-        strings::init();
-        let strings = strings();
-        let quit_popup = ConfirmPopup::with_title(
-            strings.get(i18n::all::QUIT_POPUP_TITLE),
-            strings.get(i18n::all::QUIT_POPUP_BODY),
-        );
-
         Ui {
-            history: vec![crate::menu::main()],
+            history: vec![],
             terminal,
             active: false,
             grab_input: false,
@@ -130,7 +125,7 @@ impl Ui {
             touch_start: 0.0,
             touch: Touch::Stop,
             emulated_wheel: None,
-            quit_popup,
+            quit_popup: None,
         }
     }
 
@@ -287,14 +282,10 @@ impl Ui {
 
 impl UiFunctions for Ui {
     fn vid_init(&mut self) -> c_int {
-        trace!("Ui::vid_init()");
-
         let globals = globals();
         let backend = self.terminal.backend_mut();
         backend.resize(globals.scrWidth as usize, globals.scrHeight as usize);
-
         self.terminal.clear().unwrap();
-
         0
     }
 
@@ -305,6 +296,16 @@ impl UiFunctions for Ui {
     fn redraw(&mut self, _time: f32) {
         if !self.active {
             return;
+        }
+
+        if self.history.is_empty() {
+            // XXX: init here bacause ui_language cvar needed for localization is not ready
+            // in Ui::init() and Ui::vid_init()
+            self.history.push(crate::menu::main());
+            self.quit_popup = Some(ConfirmPopup::with_title(
+                i18n::all::QUIT_POPUP_TITLE.localize(),
+                i18n::all::QUIT_POPUP_BODY.localize(),
+            ));
         }
 
         let backend = self.terminal.backend_mut();
@@ -318,8 +319,11 @@ impl UiFunctions for Ui {
             .draw(|frame| {
                 menu.draw(frame.area(), frame.buffer_mut(), &screen);
                 if self.focus == Focus::QuitPopup {
-                    self.quit_popup
-                        .render(frame.area(), frame.buffer_mut(), &screen);
+                    self.quit_popup.as_mut().unwrap().render(
+                        frame.area(),
+                        frame.buffer_mut(),
+                        &screen,
+                    );
                 }
             })
             .unwrap();
@@ -390,7 +394,8 @@ impl UiFunctions for Ui {
                         _ => self.key_event_menu(event),
                     },
                     Focus::QuitPopup => {
-                        match self.quit_popup.key_event(self.terminal.backend(), event) {
+                        let popup = self.quit_popup.as_mut().unwrap();
+                        match popup.key_event(self.terminal.backend(), event) {
                             ConfirmResult::None => {}
                             ConfirmResult::Cancel => self.change_state_deny(),
                             ConfirmResult::Ok => self.quit(),
@@ -419,7 +424,10 @@ impl UiFunctions for Ui {
                     }
                 }
                 Focus::QuitPopup => {
-                    self.quit_popup.mouse_event(self.terminal.backend());
+                    self.quit_popup
+                        .as_mut()
+                        .unwrap()
+                        .mouse_event(self.terminal.backend());
                 }
             }
         }

@@ -65,7 +65,9 @@ impl MainMenu {
         let info = engine.get_game_info_2().unwrap();
         let has_demo = engine.is_map_valid(&info.demomap);
         let title = info.title.to_str().unwrap_or("<invalid utf8>");
-        let hint_hazard_course = i18n::HAZARD_COURSE_HINT.localize().replace("{title}", title);
+        let hint_hazard_course = i18n::HAZARD_COURSE_HINT
+            .localize()
+            .replace("{title}", title);
 
         let mut menu = List::empty();
         menu.set_bindings([

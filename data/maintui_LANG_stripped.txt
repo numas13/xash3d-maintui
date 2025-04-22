@@ -154,5 +154,9 @@
 "Network speed"                   ""
 "Command rate"                    ""
 "Update rate"                     ""
+"Name"                            ""
+"Version"                         ""
+"Size"                            ""
+"Do you want to change game?"     ""
 }
 }

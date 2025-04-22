@@ -228,7 +228,7 @@ impl SavesMenu {
     fn draw_table(&mut self, area: Rect, buf: &mut Buffer) {
         let header = Row::new([i18n::TIME.localize(), i18n::SAVE_COMMENT.localize()]);
         let table = Table::default()
-            .header(header.style(Style::new().bold()))
+            .header(header.style(Style::new().on_black()))
             .widths([Constraint::Length(18), Constraint::Min(20)]);
 
         let focused = !matches!(self.state.focus(), Focus::Menu);

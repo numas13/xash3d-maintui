@@ -28,6 +28,7 @@ define_menu_items! {
     MENU_OPTIONS = i18n::OPTIONS, i18n::OPTIONS_HINT;
     MENU_INTERNET = i18n::INTERNET, i18n::INTERNET_HINT;
     MENU_LAN = i18n::LAN, i18n::LAN_HINT;
+    MENU_CHANGE_GAME = i18n::CHANGE_GAME, i18n::CHANGE_GAME_HINT;
     MENU_TEST_MENU = "Test", "";
     MENU_QUIT = i18n::QUIT, i18n::QUIT_HINT;
 }
@@ -81,7 +82,9 @@ impl MainMenu {
             (Key::Char(b's'), MENU_SAVE_GAME),
             (Key::Char(b'o'), MENU_OPTIONS),
             (Key::Char(b'i'), MENU_INTERNET),
-            // (Key::Char(b'l'), MENU_LAN),
+            // TODO: key modifiers for bindings in menus?
+            // (Key::Char(b''), MENU_CHANGE_GAME),
+            // (Key::Char(b''), MENU_LAN),
             (Key::Char(b't'), MENU_TEST_MENU),
             (Key::Char(b'q'), MENU_QUIT),
         ]);
@@ -156,6 +159,7 @@ impl MainMenu {
         items.push(MENU_OPTIONS);
         items.push(MENU_INTERNET);
         items.push(MENU_LAN);
+        items.push(MENU_CHANGE_GAME);
         if utils::is_dev() {
             items.push(MENU_TEST_MENU);
         }
@@ -216,6 +220,7 @@ impl MainMenu {
             MENU_LAN => return Control::Next(menu::lan()),
             MENU_TEST_MENU => return Control::Next(menu::test()),
             MENU_OPTIONS => return Control::Next(menu::config()),
+            MENU_CHANGE_GAME => return Control::Next(menu::change_game()),
             MENU_QUIT => return Control::QuitPopup,
             item => warn!("{item} is not implemented yet"),
         }

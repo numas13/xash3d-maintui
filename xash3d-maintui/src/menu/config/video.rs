@@ -172,7 +172,10 @@ impl VideoConfig {
                 .label(i18n::BRIGHTNESS.localize())
                 .build(RemapCvar::new(c"brightness", [0.0, 1.0, 0.0, 3.0])),
         );
-        list.add(ConfigEntry::list(i18n::RESOLUTION, engine().get_mode_iter()).build(VideoMode));
+        list.add(
+            ConfigEntry::list(i18n::RESOLUTION.localize(), engine().get_mode_iter())
+                .build(VideoMode),
+        );
         list.add(
             ConfigEntry::list(
                 i18n::WINDOW_MODE.localize(),

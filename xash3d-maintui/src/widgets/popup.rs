@@ -24,27 +24,29 @@ pub struct ConfirmPopup {
     yes: Button,
     title: String,
     content: String,
+    content_width: u16,
 }
 
 impl ConfirmPopup {
-    pub fn with_title(title: impl ToString, content: impl ToString) -> Self {
+    pub fn with_title(title: impl ToString, content: &str) -> Self {
         Self {
             state: Default::default(),
             cancel: Button::cancel(),
             yes: Button::yes(),
             title: title.to_string(),
             content: content.to_string(),
+            content_width: content.width() as u16,
         }
     }
 
-    pub fn new(content: impl ToString) -> Self {
+    pub fn new(content: &str) -> Self {
         Self::with_title("Y/N", content)
     }
 }
 
 impl WidgetMut<ConfirmResult> for ConfirmPopup {
     fn render(&mut self, area: Rect, buf: &mut Buffer, _: &Screen) {
-        let width = 2 + self.content.width() as u16;
+        let width = 2 + self.content_width;
         let area = utils::centered_rect_fixed(width, 4, area);
 
         let block = utils::popup_block(&self.title);

@@ -1,4 +1,5 @@
 mod browser;
+mod change_game;
 mod config;
 mod create_server;
 mod main;
@@ -36,4 +37,5 @@ define! {
     lan = browser::Browser::new(true),
     test = test::TestMenu::new(),
     config = config::ConfigMenu::new(),
+    change_game = change_game::ChangeGame::new(),
 }

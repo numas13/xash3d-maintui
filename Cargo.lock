@@ -393,6 +393,7 @@ name = "xash3d-maintui"
 version = "0.1.0"
 dependencies = [
  "bitflags",
+ "compact_str",
  "csz",
  "libc",
  "log",

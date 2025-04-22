@@ -40,6 +40,8 @@
 "Search for online multiplayer servers on the internet." ""
 "LAN servers"                     ""
 "Search for online multiplayer servers on the locale area network." ""
+"GameUI_GameMenu_ChangeGame"      ""
+"GameUI_MainMenu_Hint_ChangeGame" ""
 "GameUI_MainMenu_Hint_QuitGame"   ""
 "GameUI_Easy"                     ""
 "GameUI_Medium"                   ""
@@ -197,5 +199,11 @@
 "Network speed"                   ""
 "Command rate"                    ""
 "Update rate"                     ""
+"GameUI_Type"                     ""
+"Name"                            ""
+"Version"                         ""
+"Size"                            ""
+"GameUI_ChangeGame"               ""
+"Do you want to change game?"     ""
 }
 }

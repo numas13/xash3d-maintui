@@ -27,3 +27,4 @@ xash3d-shared.workspace = true
 xash3d-ui.workspace = true
 xash3d-ratatui = { version = "0.1.0", path = "../xash3d-ratatui" }
 unicode-width = "0.2"
+compact_str = "0.8"

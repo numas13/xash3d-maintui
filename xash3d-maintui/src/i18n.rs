@@ -44,6 +44,8 @@ define_strings! {
             INTERNET_HINT = "Search for online multiplayer servers on the internet.",
             LAN = "LAN servers",
             LAN_HINT = "Search for online multiplayer servers on the locale area network.",
+            CHANGE_GAME = "#GameUI_GameMenu_ChangeGame",
+            CHANGE_GAME_HINT = "#GameUI_MainMenu_Hint_ChangeGame",
             QUIT = "#GameUI_GameMenu_Quit",
             QUIT_HINT = "#GameUI_MainMenu_Hint_QuitGame",
 
@@ -297,6 +299,19 @@ define_strings! {
             NETWORK_SPEED = "Network speed",
             COMMAND_RATE = "Command rate",
             UPDATE_RATE = "Update rate",
+        }
+        custom_game {
+            TITLE = "#GameUI_GameMenu_ChangeGame",
+
+            // table
+            COLUMN_TYPE = "#GameUI_Type",
+            COLUMN_NAME = "Name",
+            COLUMN_VERSION = "Version",
+            COLUMN_SIZE = "Size",
+
+            // switch game popup
+            CHANGE_POPUP_TITLE = "#GameUI_ChangeGame",
+            CHANGE_POPUP_BODY = "Do you want to change game?",
         }
     }
 }

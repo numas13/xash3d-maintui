@@ -46,6 +46,25 @@ pub trait MenuApi<T: UiFunctions> {
 
     unsafe extern "C" fn init() {
         trace!("Ui::init()");
+
+        std::panic::set_hook(Box::new(|info| {
+            let payload = info
+                .payload()
+                .downcast_ref::<&str>()
+                .copied()
+                .or_else(|| info.payload().downcast_ref::<String>().map(|s| s.as_str()))
+                .unwrap_or("<failed to print panic payload>");
+
+            if let Some(loc) = info.location() {
+                let file = loc.file();
+                let line = loc.line();
+                let col = loc.column();
+                error!("maintui panicked at {file}:{line}:{col}:\n{payload}");
+            } else {
+                error!("maintui panicked:\n{payload}");
+            }
+        }));
+
         UI.set(RefCell::new(Ui::new())).ok();
     }
 

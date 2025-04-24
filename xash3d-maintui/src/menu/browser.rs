@@ -471,8 +471,10 @@ impl Browser {
     fn add_favorite(&mut self, addr: netadr_s, protocol: &str) -> bool {
         let engine = engine();
         if let Some(server) = self.favorite_servers.insert(addr, protocol) {
-            let address = engine.addr_to_string_ref(&addr);
-            trace!("add server \"{address}\" to favorite list");
+            trace!(
+                "add server \"{}\" to favorite list",
+                engine.addr_to_string_ref(&addr)
+            );
             if let Some(server) = self
                 .table
                 .items

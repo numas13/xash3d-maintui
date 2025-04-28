@@ -16,8 +16,8 @@ mod i18n {
     pub use crate::i18n::menu::config_network::*;
 }
 
-const CMD_RATE: &[u32] = &[25, 30, 60, 100, 150, 200, 250];
-const UPDATE_RATE: &[u32] = &[25, 30, 60, 100, 150, 200, 250];
+const CMD_RATE: &[u32] = &[20, 40, 40, 60, 80, 100];
+const UPDATE_RATE: &[u32] = &[20, 40, 40, 60, 80, 100];
 const RATE: &[u32] = &[7500, 15000, 25000, 50000, 75000, 100000];
 
 struct Network {

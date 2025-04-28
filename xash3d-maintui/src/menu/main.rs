@@ -4,7 +4,10 @@ use alloc::vec::Vec;
 use compact_str::{CompactString, ToCompactString};
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
-use xash3d_ui::{engine, globals};
+use xash3d_ui::{
+    engine, globals,
+    raw::{GameInfoFlags, GameType},
+};
 
 use crate::{
     input::{Key, KeyEvent},
@@ -54,12 +57,16 @@ pub struct MainMenu {
     skill_popup: ListPopup,
     disconnect_popup: ConfirmPopup,
     has_demo: bool,
+    has_hazard_course: bool,
+    has_skills: bool,
+    has_change_game: bool,
     start_demo: bool,
     is_client_active: bool,
     is_single: bool,
     developer: c_int,
     hint_hazard_course: CompactString,
     game_title: CompactString,
+    game_type: GameType,
 }
 
 impl MainMenu {
@@ -72,6 +79,10 @@ impl MainMenu {
             .localize()
             .replace("{title}", title)
             .into();
+        let has_skills = !info.flags.intersects(GameInfoFlags::NOSKILLS);
+        let has_hazard_course =
+            !info.trainmap.is_empty() && !info.trainmap.eq_ignore_case(&info.startmap);
+        let has_change_game = engine.get_cvar_float("host_allow_changegame") != 0.0;
 
         let mut menu = List::empty();
         menu.set_bindings([
@@ -101,12 +112,16 @@ impl MainMenu {
             ),
             disconnect_popup: ConfirmPopup::new(i18n::DISCONNECT_POPUP.localize()),
             has_demo,
+            has_hazard_course,
+            has_skills,
+            has_change_game,
             start_demo: false,
             is_client_active: false,
             is_single: false,
             developer: -1,
             hint_hazard_course,
             game_title: info.title.to_compact_string(),
+            game_type: info.gamemode,
         }
     }
 
@@ -148,21 +163,33 @@ impl MainMenu {
             items.push(MENU_RESUME_GAME);
         }
 
-        items.push(MENU_NEW_GAME);
-        if self.has_demo {
-            items.push(MENU_NEW_GAME_DEMO);
-        }
-        items.push(MENU_HAZARD_COURSE);
+        if self.game_type != GameType::MultiplayerOnly {
+            items.push(MENU_NEW_GAME);
+            if self.has_demo {
+                items.push(MENU_NEW_GAME_DEMO);
+            }
 
-        items.push(MENU_LOAD_GAME);
-        if self.is_client_active && self.is_single {
-            items.push(MENU_SAVE_GAME);
+            if self.has_hazard_course {
+                items.push(MENU_HAZARD_COURSE);
+            }
+
+            items.push(MENU_LOAD_GAME);
+            if self.is_client_active && self.is_single {
+                items.push(MENU_SAVE_GAME);
+            }
         }
 
         items.push(MENU_OPTIONS);
-        items.push(MENU_INTERNET);
-        items.push(MENU_LAN);
-        items.push(MENU_CHANGE_GAME);
+
+        if self.game_type != GameType::SingleplayerOnly {
+            items.push(MENU_INTERNET);
+            items.push(MENU_LAN);
+        }
+
+        if self.has_change_game {
+            items.push(MENU_CHANGE_GAME);
+        }
+
         if utils::is_dev() {
             items.push(MENU_TEST_MENU);
         }
@@ -205,6 +232,15 @@ impl MainMenu {
         self.start_demo = is_demo;
     }
 
+    fn maybe_show_skill_select_popup(&mut self, is_demo: bool) {
+        if self.has_skills {
+            self.show_skill_select_popup(is_demo);
+        } else {
+            self.start_demo = is_demo;
+            self.start_new_game(1.0);
+        }
+    }
+
     fn show_disconnect_popup(&mut self) {
         self.state.select(Focus::DisconnectPopup);
     }
@@ -214,8 +250,8 @@ impl MainMenu {
             MENU_CONSOLE => return Control::Console,
             MENU_DISCONNECT => self.show_disconnect_popup(),
             MENU_RESUME_GAME => return Control::Hide,
-            MENU_NEW_GAME => self.show_skill_select_popup(false),
-            MENU_NEW_GAME_DEMO => self.show_skill_select_popup(true),
+            MENU_NEW_GAME => self.maybe_show_skill_select_popup(false),
+            MENU_NEW_GAME_DEMO => self.maybe_show_skill_select_popup(true),
             MENU_HAZARD_COURSE => self.start_hazardcourse(),
             MENU_LOAD_GAME => return Control::Next(menu::load()),
             MENU_SAVE_GAME => return Control::Next(menu::save()),

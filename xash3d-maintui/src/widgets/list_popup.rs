@@ -29,7 +29,6 @@ impl ListPopup {
         let mut list = List::new_first(items);
         list.set_style(Style::default().black().on_gray());
         list.set_highlight_style(Style::new().add_modifier(Modifier::BOLD).white().on_black());
-        list.set_popup(true);
 
         let content_width = list
             .iter()
@@ -52,12 +51,14 @@ impl WidgetMut<SelectResult> for ListPopup {
         let width = self.width;
         let height = 2 + self.list.len() as u16;
         let area = utils::centered_rect_fixed(width, height, area);
-
         let block = utils::popup_block(&self.title);
-        let list_area = block.inner(area);
+        let inner_area = block.inner(area);
+        // Force clear content of previous widgets.
+        for pos in inner_area.intersection(*buf.area()).positions() {
+            buf[pos].reset();
+        }
         block.render(area, buf);
-
-        self.list.render(list_area, buf, screen);
+        self.list.render(inner_area, buf, screen);
     }
 
     fn key_event(&mut self, backend: &XashBackend, event: KeyEvent) -> SelectResult {

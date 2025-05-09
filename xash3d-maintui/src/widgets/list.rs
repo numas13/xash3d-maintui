@@ -80,7 +80,6 @@ pub struct List {
     pub state: ListState,
     items: Vec<String>,
     bindings: Vec<(Key, String)>,
-    popup: bool,
     list: Option<ratatui::widgets::List<'static>>,
 }
 
@@ -96,7 +95,6 @@ impl List {
             state: ListState::new(),
             items: items.into_iter().map(|i| i.to_string()).collect(),
             bindings: Vec::new(),
-            popup: false,
             list: None,
         }
     }
@@ -125,10 +123,6 @@ impl List {
             }
         }
         None
-    }
-
-    pub fn set_popup(&mut self, popup: bool) {
-        self.popup = popup;
     }
 
     pub fn empty() -> Self {
@@ -202,24 +196,13 @@ impl List {
     }
 
     fn init_list(&mut self) {
-        let mut items = Vec::with_capacity(self.items.len());
-        for i in &self.items {
-            let mut line = self.create_line(i);
-            if self.popup && line.width() < 32 {
-                // HACK: fill with spaces to overwrite content of background
-                let n = 32 - line.width();
-                line.push_span(&"                                        "[..n]);
-            }
-            items.push(line);
-        }
-
-        self.list = Some(
-            ratatui::widgets::List::new(items)
-                .style(self.style)
-                .highlight_style(self.highlight_style)
-                .highlight_symbol(symbols::HIGHLIGHT_SYMBOL)
-                .highlight_spacing(HighlightSpacing::Always),
-        );
+        let items: Vec<_> = self.items.iter().map(|i| self.create_line(i)).collect();
+        self.list = ratatui::widgets::List::new(items)
+            .style(self.style)
+            .highlight_style(self.highlight_style)
+            .highlight_symbol(symbols::HIGHLIGHT_SYMBOL)
+            .highlight_spacing(HighlightSpacing::Always)
+            .into();
     }
 }
 

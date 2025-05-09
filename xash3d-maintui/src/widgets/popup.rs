@@ -51,6 +51,10 @@ impl WidgetMut<ConfirmResult> for ConfirmPopup {
 
         let block = utils::popup_block(&self.title);
         let inner_area = block.inner(area);
+        // Force clear content of previous widgets.
+        for pos in inner_area.intersection(*buf.area()).positions() {
+            buf[pos].reset();
+        }
         block.render(area, buf);
 
         let [text_area, buttons_area] =

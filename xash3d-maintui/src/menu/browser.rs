@@ -39,6 +39,7 @@ const MENU_ADD_FAVORITE: &str = i18n::ADD_FAVORITE;
 const MENU_REFRESH: &str = i18n::REFRESH;
 const MENU_SORT: &str = i18n::SORT;
 
+const SORT_CANCEL: &str = i18n::CANCEL;
 const SORT_PING: &str = i18n::SORT_PING;
 const SORT_NUMCL: &str = i18n::SORT_NUMCL;
 const SORT_HOST: &str = i18n::SORT_HOST;
@@ -332,6 +333,7 @@ pub struct Browser {
     sorted: bool,
     time: Instant,
     menu: List,
+    menu_last: Option<usize>,
     sort_by: SortBy,
     sort_reverse: bool,
     sort_popup: ListPopup,
@@ -381,11 +383,12 @@ impl Browser {
             sorted: false,
             time: Instant::now(),
             menu,
+            menu_last: None,
             sort_by: SortBy::default(),
             sort_reverse: false,
             sort_popup: ListPopup::new(
                 i18n::SORT_TITLE,
-                [SORT_PING, SORT_NUMCL, SORT_HOST, SORT_MAP],
+                [SORT_CANCEL, SORT_PING, SORT_NUMCL, SORT_HOST, SORT_MAP],
             ),
             password_popup: InputPopup::new_password(i18n::PASSWORD_LABEL),
             tab: Tab::default(),
@@ -434,6 +437,31 @@ impl Browser {
             self.tab = to;
             self.query_servers();
         }
+    }
+
+    fn focus_menu(&mut self) {
+        if self.menu_last.is_none() {
+            self.menu.state.select_first();
+        } else {
+            self.menu.state.select(self.menu_last.take());
+        }
+        self.state.next(Focus::Menu);
+    }
+
+    fn focus_tabs(&mut self) {
+        self.table.state.select(None);
+        self.state.next(Focus::Tabs);
+    }
+
+    fn focus_table(&mut self) {
+        if self.menu.state.selected().is_some() {
+            self.menu_last = self.menu.state.selected();
+            self.menu.state.select(None);
+        }
+        if self.table.state.selected().is_none() {
+            self.table.state.select_first();
+        }
+        self.state.next(Focus::Table);
     }
 
     fn menu_exec(&mut self, i: usize) -> Control {
@@ -547,16 +575,19 @@ impl Browser {
 
     fn sort_item_exec(&mut self, i: usize, focus_table: bool) {
         let sort_by = match &self.sort_popup[i] {
-            SORT_PING => SortBy::Ping,
-            SORT_NUMCL => SortBy::Numcl,
-            SORT_HOST => SortBy::Host,
-            SORT_MAP => SortBy::Map,
+            SORT_CANCEL => None,
+            SORT_PING => Some(SortBy::Ping),
+            SORT_NUMCL => Some(SortBy::Numcl),
+            SORT_HOST => Some(SortBy::Host),
+            SORT_MAP => Some(SortBy::Map),
             _ => {
                 debug!("unimplemented sort popup item {i}");
                 return;
             }
         };
-        self.set_sort(sort_by);
+        if let Some(sort_by) = sort_by {
+            self.set_sort(sort_by);
+        }
         if focus_table {
             self.table.state.select_first();
             self.state.select(Focus::Table);
@@ -567,7 +598,7 @@ impl Browser {
 
     fn draw_menu(&mut self, area: Rect, buf: &mut Buffer, screen: &Screen) {
         let block = Block::new()
-            .borders(Borders::BOTTOM)
+            .borders(Borders::RIGHT)
             .border_style(utils::main_block_border_style());
         let menu_area = block.inner(area);
         block.render(area, buf);
@@ -675,17 +706,11 @@ impl Browser {
             Key::Tab => {
                 self.tabs_key_event(backend, event);
             }
+            Key::ArrowRight | Key::Char(b'l') => {
+                self.focus_table();
+            }
             _ => match self.menu.key_event(backend, event) {
                 SelectResult::Ok(i) => return self.menu_exec(i),
-                SelectResult::Down if self.is_lan => {
-                    self.menu.state.select(None);
-                    self.table.state.select_first();
-                    self.state.next(Focus::Table);
-                }
-                SelectResult::Down => {
-                    self.menu.state.select(None);
-                    self.state.next(Focus::Tabs);
-                }
                 SelectResult::Cancel => return Control::Back,
                 _ => {}
             },
@@ -699,19 +724,12 @@ impl Browser {
         }
         let key = event.key();
         match key {
-            _ if key.is_prev() => {
-                self.menu.state.select_last();
-                self.state.prev(Focus::Menu);
-            }
-            _ if key.is_next() => {
-                self.table.state.select_first();
-                self.state.next(Focus::Table);
-            }
+            _ if key.is_next() => self.focus_table(),
             Key::Tab if event.shift() => self.switch_tab(self.tab.prev()),
             Key::Tab => self.switch_tab(self.tab.next()),
             Key::Char(b'h') | Key::ArrowLeft => self.switch_tab(self.tab.prev()),
             Key::Char(b'l') | Key::ArrowRight => self.switch_tab(self.tab.next()),
-            Key::Char(b'q') => return Control::Back,
+            Key::Char(b'q') | Key::Escape => return Control::Back,
             Key::Mouse(0) => return self.handle_mouse_click(backend, event),
             _ => {}
         }
@@ -741,23 +759,16 @@ impl Browser {
     fn table_key_event(&mut self, backend: &XashBackend, event: KeyEvent) -> Control {
         let key = event.key();
         match key {
-            Key::Char(b'h') | Key::ArrowLeft if self.tab == Tab::Direct => return Control::Back,
+            Key::Char(b'h') | Key::ArrowLeft if self.tab == Tab::Direct => self.focus_menu(),
             Key::Tab | Key::Char(b'h' | b'l') | Key::ArrowLeft | Key::ArrowRight => {
                 self.tabs_key_event(backend, event);
             }
             Key::Char(b'f') => self.toggle_favorite(),
+            Key::Char(b'q') | Key::Escape => return Control::Back,
             _ => match self.table.key_event(backend, event) {
                 SelectResult::Ok(i) => return self.table_exec(i),
-                SelectResult::Up if self.is_lan => {
-                    self.menu.state.select_last();
-                    self.table.state.select(None);
-                    self.state.prev(Focus::Menu);
-                }
-                SelectResult::Up => {
-                    self.table.state.select(None);
-                    self.state.prev(Focus::Tabs);
-                }
-                SelectResult::Cancel => return Control::Back,
+                SelectResult::Up if !self.is_lan => self.focus_tabs(),
+                SelectResult::Cancel => self.focus_menu(),
                 _ => {}
             },
         }
@@ -793,11 +804,9 @@ impl Menu for Browser {
         } else {
             i18n::TITLE_INTERNET
         };
-        let [menu_area, table_area] = Layout::vertical([
-            Constraint::Length(self.menu.len() as u16 + 1),
-            Constraint::Percentage(100),
-        ])
-        .areas(utils::main_block(title, area, buf));
+        let [menu_area, table_area] =
+            Layout::horizontal([Constraint::Length(24), Constraint::Percentage(100)])
+                .areas(utils::main_block(title, area, buf));
 
         self.draw_menu(menu_area, buf, screen);
         if !self.is_lan {
@@ -895,6 +904,7 @@ impl Menu for Browser {
                     .any(|i| i.1.contains(backend.cursor_position()))
                 {
                     self.menu.state.select(None);
+                    self.table.state.select(None);
                     self.state.set(Focus::Tabs);
                     true
                 } else {

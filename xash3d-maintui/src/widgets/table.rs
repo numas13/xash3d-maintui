@@ -81,12 +81,9 @@ impl<T> MyTable<T> {
         f: impl FnMut(&T) -> Option<Row>,
     ) {
         let style = if focused {
-            Style::new()
-                .add_modifier(Modifier::BOLD)
-                .black()
-                .on_yellow()
+            Style::new().black().on_yellow()
         } else {
-            Style::new()
+            Style::new().on_dark_gray()
         };
         let rows: Vec<_> = self.items.iter().filter_map(f).collect();
         let table = table

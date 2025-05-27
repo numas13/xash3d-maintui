@@ -13,11 +13,7 @@ def options(opt):
 
 def rust_triple(conf):
 	if conf.env.DEST_CPU == 'x86_64':
-		if conf.env.DEST_OS in ['win32', 'linux']:
-			force_32bit = not conf.options.ALLOW64
-		else:
-			force_32bit = conf.options.FORCE32
-		arch = 'i686' if force_32bit else 'x86_64'
+		arch = 'x86_64'
 	elif conf.env.DEST_CPU == 'x86':
 		arch = 'i686'
 	elif conf.env.DEST_CPU == 'riscv':

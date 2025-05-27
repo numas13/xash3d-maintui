@@ -6,11 +6,10 @@ use std::{
 };
 
 use csz::CStrThin;
-use xash3d_cell::SyncOnceCell;
-use xash3d_shared::raw::netadr_s;
 use xash3d_ui::{
+    cell::SyncOnceCell,
     engine,
-    raw::{self, MENU_EXTENDED_API_VERSION},
+    raw::{self, netadr_s, MENU_EXTENDED_API_VERSION},
 };
 
 use crate::ui::Ui;

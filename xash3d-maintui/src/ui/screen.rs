@@ -2,8 +2,7 @@ use std::ffi::c_int;
 
 use ratatui::layout::{Position, Rect, Size};
 use xash3d_ratatui::XashBackend;
-use xash3d_shared::{color::RGBA, raw::wrect_s};
-use xash3d_ui::engine;
+use xash3d_ui::{color::RGBA, engine, raw::wrect_s};
 
 pub struct Screen {
     /// Cell size in pixels.

@@ -21,9 +21,6 @@ csz.workspace = true
 ratatui.workspace = true
 res.workspace = true
 xash3d-protocol = "0.2"
-xash3d-cell.workspace = true
-xash3d-utils.workspace = true
-xash3d-shared.workspace = true
 xash3d-ui.workspace = true
 xash3d-ratatui = { version = "0.1.0", path = "../xash3d-ratatui" }
 unicode-width = "0.2"

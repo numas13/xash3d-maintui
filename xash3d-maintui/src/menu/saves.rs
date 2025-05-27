@@ -11,8 +11,10 @@ use ratatui::{
     widgets::{Block, Borders, Cell, Row, Table},
 };
 use xash3d_ratatui::XashBackend;
-use xash3d_shared::consts::{CS_SIZE, CS_TIME};
-use xash3d_ui::engine;
+use xash3d_ui::{
+    consts::{CS_SIZE, CS_TIME},
+    engine,
+};
 
 use crate::{
     input::{Key, KeyEvent},

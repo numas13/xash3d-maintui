@@ -213,7 +213,6 @@ impl AxisBindingMap {
         for &i in map.iter() {
             cur.write_bytes([u8::from(i)]).ok();
         }
-        std::mem::drop(cur);
         engine().set_cvar_string(Self::CVAR_NAME, buf.as_thin());
     }
 

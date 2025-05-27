@@ -8,8 +8,10 @@ use ratatui::{
     widgets::{Block, Borders, Cell, Paragraph, Row, Table},
 };
 use xash3d_ratatui::XashBackend;
-use xash3d_shared::parser::{Error as ParserError, Tokens};
-use xash3d_ui::engine;
+use xash3d_ui::{
+    engine,
+    parser::{Error as ParserError, Tokens},
+};
 
 use crate::{
     input::{Key, KeyEvent},

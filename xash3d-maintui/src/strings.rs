@@ -1,12 +1,12 @@
 use std::{borrow::Cow, char, collections::HashMap, ffi::CStr, fmt::Write, str};
 
 use csz::CStrArray;
-use xash3d_cell::SyncOnceCell;
-use xash3d_shared::{
+use xash3d_ui::{
+    cell::SyncOnceCell,
     cvar::CVarFlags,
+    engine,
     parser::{Error, Tokens},
 };
-use xash3d_ui::engine;
 
 const DEFAULT_LANGUAGE: &str = "english";
 const CUSTOM_STRINGS_PATH: &CStr = c"gfx/shell/strings.lst";

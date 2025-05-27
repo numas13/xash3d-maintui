@@ -12,8 +12,7 @@ use ratatui::{
 };
 use xash3d_protocol::{self as xash3d, color::Color as XashColor};
 use xash3d_ratatui::XashBackend;
-use xash3d_shared::{parser::Tokens, raw::netadr_s};
-use xash3d_ui::engine;
+use xash3d_ui::{engine, parser::Tokens, raw::netadr_s};
 
 use crate::{
     input::{Key, KeyEvent},

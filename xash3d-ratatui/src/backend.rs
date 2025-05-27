@@ -6,8 +6,7 @@ use ratatui::{
     layout::{Position, Size},
     prelude::*,
 };
-use xash3d_shared::{color::RGBA, raw::wrect_s};
-use xash3d_ui::{engine, globals, picture::Picture, Engine};
+use xash3d_ui::{color::RGBA, engine, globals, picture::Picture, raw::wrect_s, Engine};
 
 use crate::{
     bmp::Bmp,

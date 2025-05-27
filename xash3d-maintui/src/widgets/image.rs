@@ -1,7 +1,6 @@
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
-use xash3d_shared::color::RGBA;
-use xash3d_ui::raw::HIMAGE;
+use xash3d_ui::{color::RGBA, raw::HIMAGE};
 
 use crate::{
     input::{Key, KeyEvent},

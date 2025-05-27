@@ -9,8 +9,11 @@ use std::{
 use csz::CStrArray;
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
-use xash3d_shared::parser::{Error as ParseError, Tokens};
-use xash3d_ui::{engine, utils::escape_command};
+use xash3d_ui::{
+    engine,
+    parser::{Error as ParseError, Tokens},
+    utils::escape_command,
+};
 
 use crate::{
     config_list::{Button, ConfigBackend, ConfigEntry, ConfigItem, ConfigList},

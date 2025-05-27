@@ -3,8 +3,7 @@ use std::ffi::c_int;
 use csz::CStrThin;
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
-use xash3d_shared::color::RGBA;
-use xash3d_ui::engine;
+use xash3d_ui::{color::RGBA, engine};
 
 use crate::{
     input::{Key, KeyEvent},

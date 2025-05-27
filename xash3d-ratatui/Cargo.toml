@@ -13,6 +13,5 @@ bundled = []
 libc.workspace = true
 log.workspace = true
 ratatui.workspace = true
-xash3d-shared.workspace = true
 xash3d-ui.workspace = true
 ab_glyph = "0.2.29"

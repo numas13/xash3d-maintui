@@ -89,8 +89,10 @@ pub trait MenuApi<T: UiFunctions> {
     }
 
     unsafe extern "C" fn add_server_to_list(adr: netadr_s, info: *const c_char) {
-        let info = unsafe { CStr::from_ptr(info).to_str().unwrap() };
-        Self::global().add_server_to_list(adr, info)
+        let info = unsafe { CStr::from_ptr(info) };
+        // XXX: Use lossy becase engine doesn't check if the info is a valid UTF-8 string.
+        // The lossy conversion will replace garbage with a replacement character.
+        Self::global().add_server_to_list(adr, &info.to_string_lossy())
     }
 
     unsafe extern "C" fn get_cursor_pos(x: *mut c_int, y: *mut c_int) {

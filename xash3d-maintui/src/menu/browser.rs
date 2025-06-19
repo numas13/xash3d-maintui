@@ -180,7 +180,7 @@ impl SavedServer {
     fn query_info(&self) {
         let address = engine().addr_to_string(self.addr);
         engine().client_cmdf(format_args!(
-            "queryserver \"{address}\" \"{}\"",
+            "ui_queryserver \"{address}\" \"{}\"",
             self.protocol
         ));
     }

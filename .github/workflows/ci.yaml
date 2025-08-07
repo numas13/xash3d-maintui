@@ -83,11 +83,11 @@ jobs:
             target: x86_64-unknown-linux-gnu
             lib: libmenu.so
 
-          - runs-on: windows-2019
+          - runs-on: windows-2022
             target: i686-pc-windows-msvc
             lib: menu.dll
 
-          - runs-on: windows-2019
+          - runs-on: windows-2022
             target: x86_64-pc-windows-msvc
             lib: menu.dll
 

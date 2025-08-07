@@ -31,7 +31,7 @@ pub fn popup_block_style() -> Style {
     Style::default().black().on_gray()
 }
 
-pub fn popup_block(title: &str) -> Block {
+pub fn popup_block(title: &str) -> Block<'_> {
     Block::default()
         .title(strings::get(title).black())
         .title_alignment(Alignment::Center)

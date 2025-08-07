@@ -40,7 +40,7 @@ struct Map {
     title: String,
 }
 
-fn parse_map_list(s: &str) -> Result<Vec<Map>, ParseError> {
+fn parse_map_list(s: &str) -> Result<Vec<Map>, ParseError<'_>> {
     let mut list = Vec::new();
     list.push(Map {
         name: i18n::RANDOM_MAP.localize().to_string(),

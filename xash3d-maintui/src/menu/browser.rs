@@ -953,7 +953,7 @@ impl Menu for Browser {
     }
 }
 
-fn colorize(s: &str) -> Line {
+fn colorize(s: &str) -> Line<'_> {
     let mut line = Line::default();
     for (color, text) in xash3d::color::ColorIter::new(s) {
         let style = XashColor::try_from(color)

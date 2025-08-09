@@ -68,7 +68,7 @@ dependencies = [
 [[package]]
 name = "csz"
 version = "0.2.0"
-source = "git+https://github.com/numas13/csz.git#316a8c71be3a50b5fff41944e32e1012f99bbeb9"
+source = "git+https://github.com/numas13/csz.git#89bd2afc5b24535b04aca346a8fa25891a194a93"
 
 [[package]]
 name = "darling"
@@ -381,12 +381,12 @@ checksum = "1fc81956842c57dac11422a97c3b8195a1ff727f06e85c84ed2e8aa277c9a0fd"
 [[package]]
 name = "xash3d-cell"
 version = "0.1.0"
-source = "git+https://github.com/numas13/xash3d-sdk.git#4e9f4cbbcf11450a84ab94162ac4234df84f4991"
+source = "git+https://github.com/numas13/xash3d-sdk.git#13e014487de7941b254a7fa46b3fc18fbbc167df"
 
 [[package]]
 name = "xash3d-hl-resources"
 version = "0.1.0"
-source = "git+https://github.com/numas13/xash3d-sdk.git#4e9f4cbbcf11450a84ab94162ac4234df84f4991"
+source = "git+https://github.com/numas13/xash3d-sdk.git#13e014487de7941b254a7fa46b3fc18fbbc167df"
 
 [[package]]
 name = "xash3d-maintui"
@@ -408,7 +408,7 @@ dependencies = [
 [[package]]
 name = "xash3d-math"
 version = "0.1.0"
-source = "git+https://github.com/numas13/xash3d-sdk.git#4e9f4cbbcf11450a84ab94162ac4234df84f4991"
+source = "git+https://github.com/numas13/xash3d-sdk.git#13e014487de7941b254a7fa46b3fc18fbbc167df"
 
 [[package]]
 name = "xash3d-protocol"
@@ -435,7 +435,7 @@ dependencies = [
 [[package]]
 name = "xash3d-shared"
 version = "0.1.0"
-source = "git+https://github.com/numas13/xash3d-sdk.git#4e9f4cbbcf11450a84ab94162ac4234df84f4991"
+source = "git+https://github.com/numas13/xash3d-sdk.git#13e014487de7941b254a7fa46b3fc18fbbc167df"
 dependencies = [
  "bitflags",
  "csz",
@@ -447,7 +447,7 @@ dependencies = [
 [[package]]
 name = "xash3d-ui-engine"
 version = "0.1.0"
-source = "git+https://github.com/numas13/xash3d-sdk.git#4e9f4cbbcf11450a84ab94162ac4234df84f4991"
+source = "git+https://github.com/numas13/xash3d-sdk.git#13e014487de7941b254a7fa46b3fc18fbbc167df"
 dependencies = [
  "bitflags",
  "csz",
@@ -459,7 +459,7 @@ dependencies = [
 [[package]]
 name = "xash3d-utils"
 version = "0.1.0"
-source = "git+https://github.com/numas13/xash3d-sdk.git#4e9f4cbbcf11450a84ab94162ac4234df84f4991"
+source = "git+https://github.com/numas13/xash3d-sdk.git#13e014487de7941b254a7fa46b3fc18fbbc167df"
 dependencies = [
  "csz",
  "log",

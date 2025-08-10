@@ -1,0 +1,167 @@
+use std::{
+    fmt::{self, Write},
+    str::FromStr,
+    time::Duration,
+};
+
+use csz::CStrArray;
+use xash3d_protocol::color::trim_color;
+use xash3d_ui::{engine, raw::netadr_s};
+
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum Protocol {
+    Xash(u8),
+    GoldSrc,
+}
+
+// impl Protocol {
+//     pub fn is_legacy(&self) -> bool {
+//         matches!(self, Self::Xash(48))
+//     }
+//
+//     pub fn is_goldsrc(&self) -> bool {
+//         matches!(self, Self::GoldSrc)
+//     }
+// }
+
+impl Default for Protocol {
+    fn default() -> Self {
+        Self::Xash(49)
+    }
+}
+
+pub struct InvalidProtocolError;
+
+impl FromStr for Protocol {
+    type Err = InvalidProtocolError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "49" => Ok(Self::Xash(49)),
+            "48" | "legacy" => Ok(Self::Xash(48)),
+            "gs" | "goldsrc" => Ok(Self::GoldSrc),
+            _ => Err(InvalidProtocolError),
+        }
+    }
+}
+
+impl fmt::Display for Protocol {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Xash(p) => p.fmt(f),
+            Self::GoldSrc => "gs".fmt(f),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct ServerInfo {
+    pub addr: netadr_s,
+    pub host: String,
+    pub host_cmp: String,
+    pub map: String,
+    pub gamedir: String,
+    pub numcl: u32,
+    pub maxcl: u32,
+    pub dm: bool,
+    pub team: bool,
+    pub coop: bool,
+    pub password: bool,
+    pub dedicated: bool,
+    pub favorite: bool,
+    pub fake: bool,
+    pub protocol: Protocol,
+    pub ping: Duration,
+}
+
+impl ServerInfo {
+    // FIXME: netadr_s does not implement Default trait
+    fn new(addr: netadr_s) -> Self {
+        Self {
+            addr,
+            host: String::new(),
+            host_cmp: String::new(),
+            map: String::new(),
+            gamedir: String::new(),
+            numcl: 0,
+            maxcl: 0,
+            dm: false,
+            team: false,
+            coop: false,
+            password: false,
+            dedicated: false,
+            favorite: false,
+            fake: false,
+            protocol: Protocol::default(),
+            ping: Duration::default(),
+        }
+    }
+
+    pub fn new_fake_favorite(addr: netadr_s, protocol: Protocol) -> Self {
+        ServerInfo {
+            host: engine().addr_to_string(addr).to_string(),
+            protocol,
+            ping: Duration::from_secs(999),
+            favorite: true,
+            fake: true,
+            ..Self::new(addr)
+        }
+    }
+
+    pub fn parse(addr: netadr_s, info: &str, ping: Duration) -> Option<Self> {
+        if !info.starts_with("\\") {
+            return None;
+        }
+
+        let mut ret = Self {
+            ping,
+            ..Self::new(addr)
+        };
+        let mut it = info[1..].split('\\');
+        while let Some(key) = it.next() {
+            let value = it.next()?;
+            match key {
+                "p" => {
+                    ret.protocol = trim_color(value)
+                        .parse()
+                        .map(Protocol::Xash)
+                        .unwrap_or_default()
+                }
+                "host" => ret.host = value.trim().to_owned(),
+                "map" => ret.map = trim_color(value).to_string(),
+                "gamedir" => ret.gamedir = trim_color(value).to_string(),
+                "numcl" => ret.numcl = trim_color(value).parse().unwrap_or_default(),
+                "maxcl" => ret.maxcl = trim_color(value).parse().unwrap_or_default(),
+                "legacy" => {
+                    if value == "1" {
+                        ret.ping /= 2;
+                        ret.protocol = Protocol::Xash(48);
+                    }
+                }
+                "gs" => {
+                    if value == "1" {
+                        ret.protocol = Protocol::GoldSrc;
+                    }
+                }
+                "dm" => ret.dm = value == "1",
+                "team" => ret.team = value == "1",
+                "coop" => ret.coop = value == "1",
+                "password" => ret.password = value == "1",
+                "dedicated" => ret.dedicated = value == "1",
+                _ => debug!("unimplemented server info {key}={value}"),
+            }
+        }
+        ret.host_cmp = trim_color(&ret.host).to_lowercase();
+        Some(ret)
+    }
+
+    pub fn connect(&self, password: Option<&str>) {
+        let engine = engine();
+        let address = engine.addr_to_string(self.addr);
+        trace!("Ui: connect to {address}");
+        let mut cmd = CStrArray::<256>::new();
+        write!(cmd.cursor(), "connect {address} {}", self.protocol).unwrap();
+        engine.set_cvar_string(c"password", password.unwrap_or_default());
+        engine.client_cmd(&cmd);
+    }
+}

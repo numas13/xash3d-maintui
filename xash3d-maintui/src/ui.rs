@@ -447,8 +447,8 @@ impl UiFunctions for Ui {
     }
 
     fn add_server_to_list(&mut self, addr: netadr_s, info: &str) {
-        if let Some(menu) = self.history.last_mut() {
-            menu.add_server_to_list(addr, info);
+        for i in &mut self.history {
+            i.add_server_to_list(addr, info);
         }
     }
 

@@ -1,10 +1,5 @@
-use std::{
-    fmt::Write,
-    str,
-    time::{Duration, Instant},
-};
+use std::{fmt::Write, str, time::Instant};
 
-use csz::CStrArray;
 use ratatui::{
     prelude::*,
     style::{Color, Style, Stylize},
@@ -16,6 +11,7 @@ use xash3d_ui::{engine, parser::Tokens, raw::netadr_s};
 
 use crate::{
     input::{Key, KeyEvent},
+    server_info::{Protocol, ServerInfo},
     strings::{self, Localize},
     ui::{utils, Control, Menu, Screen, State},
     widgets::{InputPopup, InputResult, List, ListPopup, MyTable, SelectResult, WidgetMut},
@@ -58,123 +54,14 @@ enum SortBy {
     Map,
 }
 
-#[derive(Clone)]
-struct ServerInfo {
-    addr: netadr_s,
-    host: String,
-    host_cmp: String,
-    map: String,
-    gamedir: String,
-    numcl: u32,
-    maxcl: u32,
-    legacy: bool,
-    gs: bool,
-    dm: bool,
-    team: bool,
-    coop: bool,
-    password: bool,
-    dedicated: bool,
-    favorite: bool,
-    fake: bool,
-    protocol: u8,
-    ping: Duration,
-}
-
-impl ServerInfo {
-    // XXX: netadr_s does not implement Default trait...
-    fn new(addr: netadr_s) -> Self {
-        Self {
-            addr,
-            host: String::new(),
-            host_cmp: String::new(),
-            map: String::new(),
-            gamedir: String::new(),
-            numcl: 0,
-            maxcl: 0,
-            legacy: false,
-            gs: false,
-            dm: false,
-            team: false,
-            coop: false,
-            password: false,
-            dedicated: false,
-            favorite: false,
-            fake: false,
-            protocol: 0,
-            ping: Duration::default(),
-        }
-    }
-
-    fn from(addr: netadr_s, info: &str, start: Instant) -> Option<Self> {
-        use xash3d::color::trim_color;
-
-        if !info.starts_with("\\") {
-            return None;
-        }
-
-        let mut ret = Self::new(addr);
-        ret.ping = start.elapsed();
-        let mut it = info[1..].split('\\');
-        while let Some(key) = it.next() {
-            let value = it.next()?;
-            match key {
-                "p" => ret.protocol = trim_color(value).parse().unwrap_or_default(),
-                "host" => ret.host = value.trim().to_owned(),
-                "map" => ret.map = trim_color(value).to_string(),
-                "gamedir" => ret.gamedir = trim_color(value).to_string(),
-                "numcl" => ret.numcl = trim_color(value).parse().unwrap_or_default(),
-                "maxcl" => ret.maxcl = trim_color(value).parse().unwrap_or_default(),
-                "legacy" => {
-                    ret.ping /= 2;
-                    ret.legacy = value == "1";
-                }
-                "gs" => ret.gs = value == "1",
-                "dm" => ret.dm = value == "1",
-                "team" => ret.team = value == "1",
-                "coop" => ret.coop = value == "1",
-                "password" => ret.password = value == "1",
-                "dedicated" => ret.dedicated = value == "1",
-                _ => debug!("unimplemented server info {key}={value}"),
-            }
-        }
-        ret.host_cmp = xash3d_protocol::color::trim_color(&ret.host).to_lowercase();
-        Some(ret)
-    }
-
-    fn protocol(&self) -> &str {
-        if self.legacy {
-            "48"
-        } else if self.gs {
-            "gs"
-        } else {
-            "49"
-        }
-    }
-
-    fn connect(&self, password: &str) -> Control {
-        let engine = engine();
-        let address = engine.addr_to_string(self.addr);
-        trace!("Ui: connect to {address}");
-        let mut cmd = CStrArray::<256>::new();
-        write!(cmd.cursor(), "connect {address} {}", self.protocol()).unwrap();
-        engine.set_cvar_string(c"password", password);
-        engine.client_cmd(&cmd);
-        Control::BackMain
-    }
-}
-
 struct SavedServer {
     addr: netadr_s,
-    // FIXME: replace with enum
-    protocol: String,
+    protocol: Protocol,
 }
 
 impl SavedServer {
-    fn new(addr: netadr_s, protocol: &str) -> Self {
-        Self {
-            addr,
-            protocol: protocol.to_string(),
-        }
+    fn new(addr: netadr_s, protocol: Protocol) -> Self {
+        Self { addr, protocol }
     }
 
     fn query_info(&self) {
@@ -186,21 +73,7 @@ impl SavedServer {
     }
 
     fn fake_server_info(&self) -> ServerInfo {
-        ServerInfo {
-            host: engine().addr_to_string(self.addr).to_string(),
-            legacy: self.protocol == "48",
-            gs: self.protocol == "gs",
-            protocol: match self.protocol.as_str() {
-                "49" => 49,
-                "48" | "legacy" => 48,
-                "gs" | "goldsrc" => 48,
-                _ => 0,
-            },
-            ping: Duration::from_secs(999),
-            favorite: true,
-            fake: true,
-            ..ServerInfo::new(self.addr)
-        }
+        ServerInfo::new_fake_favorite(self.addr, self.protocol)
     }
 }
 
@@ -217,16 +90,20 @@ impl SavedServers {
         let data = str::from_utf8(file.as_slice()).map_err(|_| "invalid utf8")?;
         let mut tokens = Tokens::new(data).handle_colon(false);
         let mut servers = Self::default();
-        while let Some((Ok(addr), Ok(protocol))) = tokens.next().zip(tokens.next()) {
-            let Some(addr) = engine.string_to_addr(addr) else {
-                warn!("invalid address {addr:?} in file \"{path}\"");
+        while let Some((Ok(addr_raw), Ok(protocol))) = tokens.next().zip(tokens.next()) {
+            let Some(addr) = engine.string_to_addr(addr_raw) else {
+                warn!("invalid address {addr_raw:?} in file \"{path}\"");
                 continue;
             };
+            let protocol = match protocol.parse() {
+                Ok(protocol) => protocol,
+                Err(_) => {
+                    warn!("invalid protocol {protocol} for {addr_raw:?} in file \"{path}\"");
+                    continue;
+                }
+            };
             if !servers.contains(&addr) {
-                servers.list.push(SavedServer {
-                    addr,
-                    protocol: protocol.to_string(),
-                });
+                servers.list.push(SavedServer::new(addr, protocol));
             }
         }
         trace!("load {} servers from file \"{path}\"", servers.list.len());
@@ -254,7 +131,7 @@ impl SavedServers {
         }
     }
 
-    fn insert(&mut self, addr: netadr_s, protocol: &str) -> Option<&SavedServer> {
+    fn insert(&mut self, addr: netadr_s, protocol: Protocol) -> Option<&SavedServer> {
         if !self.contains(&addr) {
             self.changed = true;
             self.list.push(SavedServer::new(addr, protocol));
@@ -492,10 +369,11 @@ impl Browser {
             self.state.select(Focus::PasswordPopup(server.clone()));
             return Control::GrabInput(true);
         }
-        server.connect("")
+        server.connect(None);
+        Control::BackMain
     }
 
-    fn add_favorite(&mut self, addr: netadr_s, protocol: &str) -> bool {
+    fn add_favorite(&mut self, addr: netadr_s, protocol: Protocol) -> bool {
         let engine = engine();
         if let Some(server) = self.favorite_servers.insert(addr, protocol) {
             trace!(
@@ -528,9 +406,9 @@ impl Browser {
                 self.state.cancel_default();
                 return;
             }
-            PROTOCOL_XASH3D_49 => "49",
-            PROTOCOL_XASH3D_48 => "48",
-            PROTOCOL_GOLD_SOURCE_48 => "gs",
+            PROTOCOL_XASH3D_48 => Protocol::Xash(48),
+            PROTOCOL_XASH3D_49 => Protocol::Xash(49),
+            PROTOCOL_GOLD_SOURCE_48 => Protocol::GoldSrc,
             item => {
                 warn!("{item} is not implemented yet");
                 return;
@@ -750,7 +628,7 @@ impl Browser {
             } else {
                 server.favorite = true;
                 trace!("add server \"{address}\" to favorite list");
-                self.favorite_servers.insert(server.addr, server.protocol());
+                self.favorite_servers.insert(server.addr, server.protocol);
             }
         }
     }
@@ -871,7 +749,10 @@ impl Menu for Browser {
                 _ => {}
             },
             Focus::PasswordPopup(server) => match self.password_popup.key_event(backend, event) {
-                InputResult::Ok(password) => return server.connect(&password),
+                InputResult::Ok(password) => {
+                    server.connect(Some(&password));
+                    return Control::BackMain;
+                }
                 InputResult::Cancel => {
                     self.state.cancel_default();
                     return Control::GrabInput(false);
@@ -892,8 +773,8 @@ impl Menu for Browser {
                 if self.menu.mouse_event(backend) {
                     self.state.set(Focus::Menu);
                     true
-                // TODO: highlight table header
                 } else if self.table.mouse_event(backend) {
+                    // TODO: highlight table header
                     self.menu.state.select(None);
                     self.state.set(Focus::Table);
                     true
@@ -915,7 +796,8 @@ impl Menu for Browser {
 
     fn add_server_to_list(&mut self, addr: netadr_s, info: &str) {
         let engine = engine();
-        match ServerInfo::from(addr, info, self.time) {
+        let ping = self.time.elapsed();
+        match ServerInfo::parse(addr, info, ping) {
             Some(mut info) => {
                 info.fake = false;
                 if let Some(i) = self

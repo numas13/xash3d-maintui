@@ -19,6 +19,7 @@ mod input;
 mod logger;
 mod macros;
 mod menu;
+mod server_info;
 mod strings;
 mod ui;
 mod widgets;

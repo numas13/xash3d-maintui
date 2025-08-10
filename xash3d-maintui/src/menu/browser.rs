@@ -137,8 +137,10 @@ impl SavedServer {
 
     fn query_info(&self) -> ServerEntry {
         let info = ServerInfo::new_fake(self.addr, self.protocol);
-        let cmd = format_args!("ui_queryserver \"{}\" \"{}\"", info.host, info.protocol);
-        engine().client_cmdf(cmd);
+        engine().client_cmdf(format_args!(
+            "ui_queryserver \"{}\" \"{}\"",
+            info.host, info.protocol
+        ));
         ServerEntry::new_favorite_fake(info)
     }
 }

@@ -13,10 +13,11 @@ use ratatui::{
 };
 use xash3d_protocol::{self as xash3d, color::Color as XashColor};
 use xash3d_ratatui::XashBackend;
-use xash3d_ui::{engine, parser::Tokens, raw::netadr_s};
+use xash3d_ui::{engine, raw::netadr_s};
 
 use crate::{
     input::{Key, KeyEvent},
+    saved_servers::{SavedServer, SavedServers},
     server_info::{Protocol, ServerInfo},
     strings::{self, Localize},
     ui::{utils, Control, Menu, Screen, State},
@@ -75,17 +76,29 @@ impl ServerEntry {
             fake: false,
             favorite: false,
             query_time,
+            ping: Duration::default(),
+            info,
+        }
+    }
+
+    fn new_favorite_fake(saved: &SavedServer) -> Self {
+        let addr = saved.addr();
+        let host = engine().addr_to_string_ref(addr).to_string();
+        let info = ServerInfo::with_host_and_proto(*addr, host, saved.protocol());
+        Self {
+            fake: true,
+            favorite: true,
+            query_time: Instant::now(),
             ping: Duration::from_secs(999),
             info,
         }
     }
 
-    fn new_favorite_fake(info: ServerInfo) -> Self {
-        Self {
-            fake: true,
-            favorite: true,
-            ..Self::new(Instant::now(), info)
-        }
+    fn query_info(&self) {
+        let engine = engine();
+        let address = engine.addr_to_string_ref(&self.addr);
+        let protocol = self.protocol;
+        engine.client_cmdf(format_args!("ui_queryserver \"{address}\" \"{protocol}\""));
     }
 
     fn set_info(&mut self, info: ServerInfo) {
@@ -122,107 +135,6 @@ impl Deref for ServerEntry {
 impl DerefMut for ServerEntry {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.info
-    }
-}
-
-struct SavedServer {
-    addr: netadr_s,
-    protocol: Protocol,
-}
-
-impl SavedServer {
-    fn new(addr: netadr_s, protocol: Protocol) -> Self {
-        Self { addr, protocol }
-    }
-
-    fn query_info(&self) -> ServerEntry {
-        let info = ServerInfo::new_fake(self.addr, self.protocol);
-        engine().client_cmdf(format_args!(
-            "ui_queryserver \"{}\" \"{}\"",
-            info.host, info.protocol
-        ));
-        ServerEntry::new_favorite_fake(info)
-    }
-}
-
-#[derive(Default)]
-struct SavedServers {
-    list: Vec<SavedServer>,
-    changed: bool,
-}
-
-impl SavedServers {
-    fn load_from_file(path: &str) -> Result<Self, &'static str> {
-        let engine = engine();
-        let file = engine.load_file(path).ok_or("failed to load")?;
-        let data = str::from_utf8(file.as_slice()).map_err(|_| "invalid utf8")?;
-        let mut tokens = Tokens::new(data).handle_colon(false);
-        let mut servers = Self::default();
-        while let Some((Ok(addr_raw), Ok(protocol))) = tokens.next().zip(tokens.next()) {
-            let Some(addr) = engine.string_to_addr(addr_raw) else {
-                warn!("invalid address {addr_raw:?} in file \"{path}\"");
-                continue;
-            };
-            let protocol = match protocol.parse() {
-                Ok(protocol) => protocol,
-                Err(_) => {
-                    warn!("invalid protocol {protocol} for {addr_raw:?} in file \"{path}\"");
-                    continue;
-                }
-            };
-            if !servers.contains(&addr) {
-                servers.list.push(SavedServer::new(addr, protocol));
-            }
-        }
-        trace!("load {} servers from file \"{path}\"", servers.list.len());
-        Ok(servers)
-    }
-
-    fn save_to_file(&self, path: &str) {
-        if !self.changed {
-            return;
-        }
-        let engine = engine();
-        let mut out = String::new();
-        let mut count = 0;
-        for i in &self.list {
-            count += 1;
-            let address = engine.addr_to_string(i.addr);
-            writeln!(&mut out, "{address} {}", i.protocol).unwrap();
-        }
-        if count > 0 {
-            trace!("save {count} servers to file \"{path}\"");
-            engine.save_file(path, out.as_bytes());
-        } else {
-            trace!("delete servers file \"{path}\"");
-            engine.remove_file(path);
-        }
-    }
-
-    fn insert(&mut self, addr: netadr_s, protocol: Protocol) -> Option<&SavedServer> {
-        if !self.contains(&addr) {
-            self.changed = true;
-            self.list.push(SavedServer::new(addr, protocol));
-            self.list.last()
-        } else {
-            None
-        }
-    }
-
-    fn remove(&mut self, addr: &netadr_s) -> Option<SavedServer> {
-        let engine = engine();
-        self.list
-            .iter()
-            .position(|i| engine.compare_addr(&i.addr, addr))
-            .map(|i| {
-                self.changed = true;
-                self.list.remove(i)
-            })
-    }
-
-    fn contains(&self, addr: &netadr_s) -> bool {
-        let engine = engine();
-        self.list.iter().any(|i| engine.compare_addr(&i.addr, addr))
     }
 }
 
@@ -356,13 +268,6 @@ impl Browser {
         }
     }
 
-    fn query_favorite_servers(&mut self) {
-        for i in &self.favorite_servers.list {
-            self.table.push(i.query_info());
-        }
-        self.reset_ping();
-    }
-
     fn query_servers(&mut self) {
         self.table.clear();
         let engine = engine();
@@ -371,7 +276,13 @@ impl Browser {
             Tab::Direct if self.is_lan => engine.client_cmd(c"localservers"),
             Tab::Direct => engine.client_cmd(c"internetservers"),
             Tab::Nat => engine.client_cmd(c"internetservers"),
-            Tab::Favorite => self.query_favorite_servers(),
+            Tab::Favorite => {
+                for server in self.favorite_servers.iter() {
+                    let entry = ServerEntry::new_favorite_fake(server);
+                    entry.query_info();
+                    self.table.push(entry);
+                }
+            }
         }
     }
 
@@ -456,7 +367,9 @@ impl Browser {
                 server.favorite = true;
             }
             if self.tab == Tab::Favorite {
-                self.table.push(server.query_info());
+                let entry = ServerEntry::new_favorite_fake(server);
+                entry.query_info();
+                self.table.push(entry);
             }
             true
         } else {

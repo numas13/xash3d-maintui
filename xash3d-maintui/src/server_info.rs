@@ -1,7 +1,7 @@
 use std::{fmt, str::FromStr};
 
 use xash3d_protocol::color::trim_color;
-use xash3d_ui::{engine, raw::netadr_s};
+use xash3d_ui::raw::netadr_s;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Protocol {
@@ -86,9 +86,9 @@ impl ServerInfo {
         }
     }
 
-    pub fn new_fake(addr: netadr_s, protocol: Protocol) -> Self {
+    pub fn with_host_and_proto(addr: netadr_s, host: String, protocol: Protocol) -> Self {
         ServerInfo {
-            host: engine().addr_to_string(addr).to_string(),
+            host,
             protocol,
             ..Self::new(addr)
         }

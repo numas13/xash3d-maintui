@@ -1,10 +1,5 @@
-use std::{
-    fmt::{self, Write},
-    str::FromStr,
-    time::Duration,
-};
+use std::{fmt, str::FromStr};
 
-use csz::CStrArray;
 use xash3d_protocol::color::trim_color;
 use xash3d_ui::{engine, raw::netadr_s};
 
@@ -14,15 +9,15 @@ pub enum Protocol {
     GoldSrc,
 }
 
-// impl Protocol {
-//     pub fn is_legacy(&self) -> bool {
-//         matches!(self, Self::Xash(48))
-//     }
-//
-//     pub fn is_goldsrc(&self) -> bool {
-//         matches!(self, Self::GoldSrc)
-//     }
-// }
+impl Protocol {
+    pub fn is_legacy(&self) -> bool {
+        matches!(self, Self::Xash(48))
+    }
+
+    // pub fn is_goldsrc(&self) -> bool {
+    //     matches!(self, Self::GoldSrc)
+    // }
+}
 
 impl Default for Protocol {
     fn default() -> Self {
@@ -68,10 +63,7 @@ pub struct ServerInfo {
     pub coop: bool,
     pub password: bool,
     pub dedicated: bool,
-    pub favorite: bool,
-    pub fake: bool,
     pub protocol: Protocol,
-    pub ping: Duration,
 }
 
 impl ServerInfo {
@@ -90,33 +82,24 @@ impl ServerInfo {
             coop: false,
             password: false,
             dedicated: false,
-            favorite: false,
-            fake: false,
             protocol: Protocol::default(),
-            ping: Duration::default(),
         }
     }
 
-    pub fn new_fake_favorite(addr: netadr_s, protocol: Protocol) -> Self {
+    pub fn new_fake(addr: netadr_s, protocol: Protocol) -> Self {
         ServerInfo {
             host: engine().addr_to_string(addr).to_string(),
             protocol,
-            ping: Duration::from_secs(999),
-            favorite: true,
-            fake: true,
             ..Self::new(addr)
         }
     }
 
-    pub fn parse(addr: netadr_s, info: &str, ping: Duration) -> Option<Self> {
+    pub fn parse(addr: netadr_s, info: &str) -> Option<Self> {
         if !info.starts_with("\\") {
             return None;
         }
 
-        let mut ret = Self {
-            ping,
-            ..Self::new(addr)
-        };
+        let mut ret = Self::new(addr);
         let mut it = info[1..].split('\\');
         while let Some(key) = it.next() {
             let value = it.next()?;
@@ -134,7 +117,6 @@ impl ServerInfo {
                 "maxcl" => ret.maxcl = trim_color(value).parse().unwrap_or_default(),
                 "legacy" => {
                     if value == "1" {
-                        ret.ping /= 2;
                         ret.protocol = Protocol::Xash(48);
                     }
                 }
@@ -153,15 +135,5 @@ impl ServerInfo {
         }
         ret.host_cmp = trim_color(&ret.host).to_lowercase();
         Some(ret)
-    }
-
-    pub fn connect(&self, password: Option<&str>) {
-        let engine = engine();
-        let address = engine.addr_to_string(self.addr);
-        trace!("Ui: connect to {address}");
-        let mut cmd = CStrArray::<256>::new();
-        write!(cmd.cursor(), "connect {address} {}", self.protocol).unwrap();
-        engine.set_cvar_string(c"password", password.unwrap_or_default());
-        engine.client_cmd(&cmd);
     }
 }

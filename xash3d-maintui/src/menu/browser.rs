@@ -1,5 +1,11 @@
-use std::{fmt::Write, str, time::Instant};
+use std::{
+    fmt::Write,
+    ops::{Deref, DerefMut},
+    str,
+    time::{Duration, Instant},
+};
 
+use csz::CStrArray;
 use ratatui::{
     prelude::*,
     style::{Color, Style, Stylize},
@@ -54,6 +60,71 @@ enum SortBy {
     Map,
 }
 
+#[derive(Clone)]
+struct ServerEntry {
+    fake: bool,
+    favorite: bool,
+    query_time: Instant,
+    ping: Duration,
+    info: ServerInfo,
+}
+
+impl ServerEntry {
+    fn new(query_time: Instant, info: ServerInfo) -> Self {
+        Self {
+            fake: false,
+            favorite: false,
+            query_time,
+            ping: Duration::from_secs(999),
+            info,
+        }
+    }
+
+    fn new_favorite_fake(info: ServerInfo) -> Self {
+        Self {
+            fake: true,
+            favorite: true,
+            ..Self::new(Instant::now(), info)
+        }
+    }
+
+    fn set_info(&mut self, info: ServerInfo) {
+        self.fake = false;
+        self.info = info;
+    }
+
+    fn update_ping(&mut self) {
+        self.ping = self.query_time.elapsed();
+        if self.info.protocol.is_legacy() {
+            self.ping /= 2;
+        }
+    }
+
+    fn connect(&self, password: Option<&str>) {
+        let engine = engine();
+        let address = engine.addr_to_string(self.addr);
+        trace!("Browser: connect to {address}");
+        let mut cmd = CStrArray::<256>::new();
+        write!(cmd.cursor(), "connect {address} {}", self.protocol).unwrap();
+        engine.set_cvar_string(c"password", password.unwrap_or_default());
+        engine.client_cmd(&cmd);
+    }
+}
+
+impl Deref for ServerEntry {
+    type Target = ServerInfo;
+
+    fn deref(&self) -> &Self::Target {
+        &self.info
+    }
+}
+
+impl DerefMut for ServerEntry {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.info
+    }
+}
+
 struct SavedServer {
     addr: netadr_s,
     protocol: Protocol,
@@ -64,16 +135,11 @@ impl SavedServer {
         Self { addr, protocol }
     }
 
-    fn query_info(&self) {
-        let address = engine().addr_to_string(self.addr);
-        engine().client_cmdf(format_args!(
-            "ui_queryserver \"{address}\" \"{}\"",
-            self.protocol
-        ));
-    }
-
-    fn fake_server_info(&self) -> ServerInfo {
-        ServerInfo::new_fake_favorite(self.addr, self.protocol)
+    fn query_info(&self) -> ServerEntry {
+        let info = ServerInfo::new_fake(self.addr, self.protocol);
+        let cmd = format_args!("ui_queryserver \"{}\" \"{}\"", info.host, info.protocol);
+        engine().client_cmdf(cmd);
+        ServerEntry::new_favorite_fake(info)
     }
 }
 
@@ -165,7 +231,7 @@ enum Focus {
     #[default]
     Table,
     SortPopup(bool),
-    PasswordPopup(ServerInfo),
+    PasswordPopup(ServerEntry),
     AddFavoriteServer(Option<netadr_s>),
 }
 
@@ -207,7 +273,7 @@ pub struct Browser {
     state: State<Focus>,
     is_lan: bool,
     sorted: bool,
-    time: Instant,
+    query_time: Instant,
     menu: List,
     menu_last: Option<usize>,
     sort_by: SortBy,
@@ -215,7 +281,7 @@ pub struct Browser {
     sort_popup: ListPopup,
     password_popup: InputPopup,
     tab: Tab,
-    table: MyTable<ServerInfo>,
+    table: MyTable<ServerEntry>,
     tabs: [(Tab, Rect); 3],
     favorite_servers: SavedServers,
     address_popup: InputPopup,
@@ -257,7 +323,7 @@ impl Browser {
             state: State::default(),
             is_lan,
             sorted: false,
-            time: Instant::now(),
+            query_time: Instant::now(),
             menu,
             menu_last: None,
             sort_by: SortBy::default(),
@@ -290,8 +356,7 @@ impl Browser {
 
     fn query_favorite_servers(&mut self) {
         for i in &self.favorite_servers.list {
-            i.query_info();
-            self.table.push(i.fake_server_info());
+            self.table.push(i.query_info());
         }
         self.reset_ping();
     }
@@ -389,10 +454,7 @@ impl Browser {
                 server.favorite = true;
             }
             if self.tab == Tab::Favorite {
-                // FIXME: track ping for each server
-                self.time = Instant::now();
-                server.query_info();
-                self.table.push(server.fake_server_info());
+                self.table.push(server.query_info());
             }
             true
         } else {
@@ -796,26 +858,24 @@ impl Menu for Browser {
 
     fn add_server_to_list(&mut self, addr: netadr_s, info: &str) {
         let engine = engine();
-        let ping = self.time.elapsed();
-        match ServerInfo::parse(addr, info, ping) {
-            Some(mut info) => {
-                info.fake = false;
-                if let Some(i) = self
+        match ServerInfo::parse(addr, info) {
+            Some(info) => {
+                if let Some(entry) = self
                     .table
                     .iter_mut()
                     .find(|i| engine.compare_addr(&i.addr, &addr))
                 {
-                    *i = ServerInfo {
-                        favorite: i.favorite,
-                        ..info
-                    };
+                    entry.set_info(info);
+                    entry.update_ping();
                     self.sorted = false;
                 } else {
+                    let mut entry = ServerEntry::new(self.query_time, info);
+                    entry.update_ping();
                     if !self.is_lan && self.tab != Tab::Nat {
-                        info.favorite = self.favorite_servers.contains(&addr);
+                        entry.favorite = self.favorite_servers.contains(&addr);
                     }
-                    if self.tab != Tab::Favorite || info.favorite {
-                        self.table.push(info);
+                    if self.tab != Tab::Favorite || entry.favorite {
+                        self.table.push(entry);
                         self.sorted = false;
                     }
                 }
@@ -831,7 +891,7 @@ impl Menu for Browser {
     }
 
     fn reset_ping(&mut self) {
-        self.time = Instant::now();
+        self.query_time = Instant::now();
     }
 }
 

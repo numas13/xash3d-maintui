@@ -78,6 +78,7 @@ define_strings! {
             TITLE_LOCAL = "Local servers",
 
             // menu
+            JOIN_GAME = "Join game",
             CREATE_SERVER = "#GameUI_GameMenu_CreateServer",
             ADD_FAVORITE = "Add favorite server",
             REFRESH = "Refresh",

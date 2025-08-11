@@ -55,6 +55,7 @@
 "Save preview"                    ""
 "Do you want to delete save?"     ""
 "Local servers"                   ""
+"Join game"                       ""
 "GameUI_GameMenu_CreateServer"    ""
 "Add favorite server"             ""
 "Refresh"                         ""

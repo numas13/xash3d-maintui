@@ -36,6 +36,7 @@ const FAVORITE_SERVERS_PATH: &str = "favorite_servers.lst";
 // const HISTORY_SERVERS_PATH: &str = "history_servers.lst";
 
 const MENU_BACK: &str = i18n::BACK;
+const MENU_JOIN_GAME: &str = i18n::JOIN_GAME;
 const MENU_CREATE_SERVER: &str = i18n::CREATE_SERVER;
 const MENU_ADD_FAVORITE: &str = i18n::ADD_FAVORITE;
 const MENU_REFRESH: &str = i18n::REFRESH;
@@ -205,10 +206,17 @@ pub struct Browser {
 impl Browser {
     pub fn new(is_lan: bool) -> Self {
         let items = if is_lan {
-            &[MENU_BACK, MENU_CREATE_SERVER, MENU_SORT, MENU_REFRESH][..]
+            &[
+                MENU_BACK,
+                MENU_JOIN_GAME,
+                MENU_CREATE_SERVER,
+                MENU_SORT,
+                MENU_REFRESH,
+            ][..]
         } else {
             &[
                 MENU_BACK,
+                MENU_JOIN_GAME,
                 MENU_CREATE_SERVER,
                 MENU_ADD_FAVORITE,
                 MENU_SORT,
@@ -289,6 +297,7 @@ impl Browser {
     fn switch_tab(&mut self, to: Tab) {
         if self.tab != to {
             self.tab = to;
+            self.table.state.select(None);
             self.query_servers();
         }
     }
@@ -320,6 +329,11 @@ impl Browser {
 
     fn menu_exec(&mut self, i: usize) -> Control {
         match &self.menu[i] {
+            MENU_JOIN_GAME => {
+                if let Some(i) = self.table.state.selected() {
+                    return self.table_exec(i);
+                }
+            }
             MENU_CREATE_SERVER => {
                 let public = if self.is_lan { 0.0 } else { 1.0 };
                 engine().set_cvar_float(c"public", public);
@@ -534,8 +548,7 @@ impl Browser {
     fn handle_mouse_click(&mut self, backend: &XashBackend, event: KeyEvent) -> Control {
         let cursor = backend.cursor_position();
         if let Some((t, _)) = self.tabs.iter().find(|(_, i)| i.contains(cursor)) {
-            self.tab = *t;
-            self.query_servers();
+            self.switch_tab(*t);
         } else if self.menu.area.contains(cursor) {
             return self.menu_key_event(backend, event);
         } else if let Some(column) = self.table.cursor_to_header_column(cursor) {
@@ -621,6 +634,8 @@ impl Browser {
             Key::Char(b'q') | Key::Escape => return Control::Back,
             _ => match self.table.key_event(backend, event) {
                 SelectResult::Ok(i) => return self.table_exec(i),
+                // TODO: handle select result
+                // SelectResult::Select(i) => self.table.state.select(i),
                 SelectResult::Up if !self.is_lan => self.focus_tabs(),
                 SelectResult::Cancel => self.focus_menu(),
                 _ => {}

@@ -136,6 +136,7 @@ impl<T> MyTable<T> {
                 if let Some(i) = self.cursor_to_table_item(backend) {
                     self.state.select(Some(i));
                     if k == 0 {
+                        // TODO: return Select for click and Ok for double-click
                         return SelectResult::Ok(i);
                     } else {
                         return SelectResult::ContextMenu(i);

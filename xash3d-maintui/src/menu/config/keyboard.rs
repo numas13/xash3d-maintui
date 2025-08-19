@@ -168,6 +168,9 @@ impl Controls {
         let engine = engine();
         let s = engine.keynum_to_str(raw as c_int);
         engine.client_cmdf_now(format_args!("bind \"{s}\" \"{bind}\""));
+        // XXX: The engine uses a static buffer for keynum_to_str. Need to drop before
+        // call to load_keys or panic will be thrown.
+        drop(s);
         self.load_keys();
         sound::confirm();
     }

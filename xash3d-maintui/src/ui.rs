@@ -5,18 +5,15 @@ pub mod sound;
 pub mod symbols;
 pub mod utils;
 
-use std::{
-    ffi::{c_char, c_int, c_uchar},
-    slice,
-};
+use std::ffi::c_int;
 
 use csz::CStrThin;
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
-use xash3d_ui::{color::RGBA, engine, globals, raw::netadr_s, utils::macros::unimpl, ActiveMenu};
+use xash3d_ui::{color::RGBA, engine, export::UnsyncGlobal, globals, raw::netadr_s, ActiveMenu};
 
 use crate::{
-    export::{Api, MenuApi, UiFunctions, UiFunctionsExtended},
+    export::Instance,
     i18n,
     input::{Key, KeyEvent, Modifier},
     strings::{self, Localize},
@@ -100,8 +97,8 @@ pub struct Ui {
     quit_popup: Option<ConfirmPopup>,
 }
 
-impl Ui {
-    pub fn new() -> Ui {
+impl Default for Ui {
+    fn default() -> Self {
         strings::init();
 
         let backend = XashBackend::new();
@@ -109,11 +106,13 @@ impl Ui {
 
         // TODO: helper macro
         unsafe extern "C" fn cmd_fg() {
-            Api::global().activate_console(false);
+            unsafe { Instance::global_assume_init_ref() }
+                .ui_mut()
+                .activate_console(false);
         }
         engine().add_command(c"fg", Some(cmd_fg));
 
-        Ui {
+        Self {
             history: vec![],
             terminal,
             active: false,
@@ -125,6 +124,16 @@ impl Ui {
             emulated_wheel: None,
             quit_popup: None,
         }
+    }
+}
+
+impl Ui {
+    pub fn vid_init(&mut self) -> bool {
+        let globals = globals();
+        let backend = self.terminal.backend_mut();
+        backend.resize(globals.scrWidth as usize, globals.scrHeight as usize);
+        self.terminal.clear().unwrap();
+        true
     }
 
     fn activate_console(&mut self, active: bool) {
@@ -163,8 +172,28 @@ impl Ui {
         self.history[0].active();
     }
 
+    pub fn set_active_menu(&mut self, active: bool) {
+        trace!("Ui::set_active_menu({active:?})");
+
+        self.active = active;
+        if active {
+            engine().set_key_dest(ActiveMenu::Menu);
+            sound::switch_menu();
+        } else {
+            if let Some(menu) = self.history.last_mut() {
+                menu.on_menu_hide();
+            }
+            engine().set_key_dest(ActiveMenu::Game);
+        }
+    }
+
     fn hide(&mut self) {
         self.set_active_menu(false);
+    }
+
+    pub fn is_visible(&self) -> bool {
+        // trace!("Ui::is_visible()");
+        self.active
     }
 
     fn key_event_menu(&mut self, event: KeyEvent) {
@@ -276,22 +305,8 @@ impl Ui {
             menu.key_event(backend, event);
         }
     }
-}
 
-impl UiFunctions for Ui {
-    fn vid_init(&mut self) -> c_int {
-        let globals = globals();
-        let backend = self.terminal.backend_mut();
-        backend.resize(globals.scrWidth as usize, globals.scrHeight as usize);
-        self.terminal.clear().unwrap();
-        0
-    }
-
-    fn shutdown(&mut self) {
-        trace!("Ui::shutdown()");
-    }
-
-    fn redraw(&mut self, _time: f32) {
+    pub fn redraw(&mut self, _time: f32) {
         if !self.active {
             return;
         }
@@ -330,22 +345,22 @@ impl UiFunctions for Ui {
         self.terminal.clear().unwrap();
     }
 
-    fn key_event(&mut self, key: c_int, down: c_int) {
+    pub fn key_event(&mut self, key: c_int, down: bool) {
         // trace!("Ui::key_event({key}, {down})");
-        let event = KeyEvent::new(key as u8, self.modifier, down != 0);
+        let event = KeyEvent::new(key as u8, self.modifier, down);
         let key = event.key();
 
         if self.grab_input {
-            if down == 1 {
+            if down {
                 self.key_event_menu(event);
             }
             return;
         }
 
         match key {
-            Key::Ctrl => self.modifier.ctrl = down != 0,
-            Key::Shift => self.modifier.shift = down != 0,
-            Key::Alt => self.modifier.alt = down != 0,
+            Key::Ctrl => self.modifier.ctrl = down,
+            Key::Shift => self.modifier.shift = down,
+            Key::Alt => self.modifier.alt = down,
             _ => {
                 if key == Key::Mouse(0) {
                     let backend = self.terminal.backend();
@@ -404,7 +419,7 @@ impl UiFunctions for Ui {
         }
     }
 
-    fn mouse_move(&mut self, x: c_int, y: c_int) {
+    pub fn mouse_move(&mut self, x: c_int, y: c_int) {
         //trace!("Ui::mouse_move({x}, {y})");
         let pos = (x.max(0) as u16, y.max(0) as u16).into();
         if self.terminal.backend_mut().set_cursor_position(pos) {
@@ -431,134 +446,29 @@ impl UiFunctions for Ui {
         }
     }
 
-    fn set_active_menu(&mut self, active: bool) {
-        trace!("Ui::set_active_menu({active:?})");
-
-        self.active = active;
-        if active {
-            engine().set_key_dest(ActiveMenu::Menu);
-            sound::switch_menu();
-        } else {
-            if let Some(menu) = self.history.last_mut() {
-                menu.on_menu_hide();
-            }
-            engine().set_key_dest(ActiveMenu::Game);
-        }
-    }
-
-    fn add_server_to_list(&mut self, addr: netadr_s, info: &str) {
-        for i in &mut self.history {
-            i.add_server_to_list(addr, info);
-        }
-    }
-
-    fn get_cursor_pos(&mut self, x: *mut c_int, y: *mut c_int) {
-        trace!("Ui::get_cursor_pos({x:?}, {y:?})");
-    }
-
-    fn set_cursor_pos(&mut self, x: c_int, y: c_int) {
-        trace!("Ui::set_cursor_pos({x}, {y})");
-    }
-
-    fn show_cursor(&mut self, show: c_int) {
-        trace!("Ui::show_cursor({show})");
-    }
-
-    fn char_event(&mut self, key: c_int) {
-        trace!("Ui::char_event({key})");
-    }
-
-    fn mouse_in_rect(&mut self) -> c_int {
-        trace!("Ui::mouse_in_rect()");
-        0
-    }
-
-    fn is_visible(&mut self) -> c_int {
-        // trace!("Ui::is_visible()");
-        self.active as c_int
-    }
-
-    fn credits_active(&mut self) -> c_int {
-        trace!("Ui::credits_active()");
-        0
-    }
-
-    fn final_credits(&mut self) {
-        trace!("Ui::final_credits()");
-    }
-}
-
-#[allow(unused_variables)]
-impl UiFunctionsExtended for Ui {
-    fn add_touch_button_to_list(
+    pub fn add_touch_button_to_list(
         &mut self,
-        name: *const c_char,
-        texture: *const c_char,
-        command: *const c_char,
-        color: *mut c_uchar,
+        name: &CStrThin,
+        texture: &CStrThin,
+        command: &CStrThin,
+        color: RGBA,
         flags: c_int,
     ) {
-        let name = unsafe { CStrThin::from_ptr(name) };
-        let texture = unsafe { CStrThin::from_ptr(texture) };
-        let command = unsafe { CStrThin::from_ptr(command) };
-        let color = unsafe { slice::from_raw_parts(color as *const u8, 4) };
-        let color = RGBA::new(color[0], color[1], color[2], color[3]);
         if let Some(menu) = self.history.last_mut() {
             menu.add_touch_button_to_list(name, texture, command, color, flags);
         }
     }
 
-    fn reset_ping(&mut self) {
+    pub fn add_server_to_list(&mut self, addr: netadr_s, info: &str) {
+        for i in &mut self.history {
+            i.add_server_to_list(addr, info);
+        }
+    }
+
+    pub fn reset_ping(&mut self) {
         trace!("Ui::reset_ping");
         if let Some(menu) = self.history.last_mut() {
             menu.reset_ping();
         }
-    }
-
-    fn show_connection_warning(&mut self) {
-        unimpl!("show_connection_warning");
-    }
-
-    fn show_update_dialog(&mut self, prefer_store: c_int) {
-        unimpl!("show_update_dialog");
-    }
-
-    fn show_message_box(&mut self, text: &CStrThin) {
-        unimpl!("show_message_box");
-    }
-
-    fn connection_progress_disconnect(&mut self) {
-        unimpl!("connection_progress_disconnect");
-    }
-
-    fn connection_progress_download(
-        &mut self,
-        file_name: &CStrThin,
-        server_name: &CStrThin,
-        current: c_int,
-        total: c_int,
-        comment: &CStrThin,
-    ) {
-        unimpl!("connection_progress_download");
-    }
-
-    fn connection_process_download_end(&mut self) {
-        unimpl!("connection_process_download_end");
-    }
-
-    fn connection_progress_precache(&mut self) {
-        unimpl!("connection_progress_precache");
-    }
-
-    fn connection_progress_connect(&mut self, server: &CStrThin) {
-        unimpl!("connection_progress_connect");
-    }
-
-    fn connection_progress_change_level(&mut self) {
-        unimpl!("connection_progress_change_level");
-    }
-
-    fn connection_progress_parse_server_info(&mut self, server: &CStrThin) {
-        unimpl!("connection_progress_parse_server_info");
     }
 }

@@ -16,7 +16,6 @@ mod config_list;
 mod export;
 mod i18n;
 mod input;
-mod logger;
 mod macros;
 mod menu;
 mod saved_servers;

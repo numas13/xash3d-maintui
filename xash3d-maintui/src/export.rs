@@ -7,8 +7,8 @@ use csz::CStrThin;
 use xash3d_ui::{
     color::RGBA,
     engine,
-    export::{self, impl_unsync_global, UiDll},
-    raw::{self, netadr_s},
+    export::{export_dll, impl_unsync_global, UiDll},
+    raw::netadr_s,
 };
 
 use crate::ui::Ui;
@@ -78,12 +78,7 @@ impl UiDll for Instance {
     }
 }
 
-#[no_mangle]
-pub extern "C" fn GetMenuAPI(
-    ret: Option<&mut raw::UI_FUNCTIONS>,
-    funcs: Option<&raw::ui_enginefuncs_s>,
-    globals: Option<&'static raw::ui_globalvars_s>,
-) -> c_int {
+export_dll!(Instance, pre {
     std::panic::set_hook(Box::new(|info| {
         let payload = info
             .payload()
@@ -101,15 +96,4 @@ pub extern "C" fn GetMenuAPI(
             error!("maintui panicked:\n{payload}");
         }
     }));
-
-    export::get_menu_api::<Instance>(ret, funcs, globals)
-}
-
-#[no_mangle]
-pub extern "C" fn GetExtAPI(
-    version: c_int,
-    ret: Option<&mut raw::UI_EXTENDED_FUNCTIONS>,
-    funcs: Option<&raw::ui_extendedfuncs_s>,
-) -> c_int {
-    export::get_ext_api::<Instance>(version, ret, funcs)
-}
+});

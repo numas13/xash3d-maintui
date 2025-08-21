@@ -1,6 +1,5 @@
-use std::ffi::CString;
-
 use ab_glyph::{Font as _, FontRef, PxScaleFont, ScaleFont};
+use alloc::{boxed::Box, ffi::CString, vec::Vec};
 use ratatui::style::Modifier;
 use xash3d_ui::{engine, picture::Picture};
 

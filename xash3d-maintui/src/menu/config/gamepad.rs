@@ -1,9 +1,9 @@
-use std::{
+use core::{
     cell::{Cell, RefCell},
     ffi::CStr,
-    rc::Rc,
 };
 
+use alloc::rc::Rc;
 use csz::CStrArray;
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;

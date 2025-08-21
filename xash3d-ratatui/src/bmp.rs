@@ -1,5 +1,6 @@
 use core::ffi::CStr;
 
+use alloc::vec::Vec;
 use log::Level::Trace;
 use xash3d_ui::picture::Picture;
 

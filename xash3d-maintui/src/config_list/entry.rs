@@ -1,5 +1,6 @@
-use std::ffi::CStr;
+use core::ffi::CStr;
 
+use alloc::boxed::Box;
 use compact_str::{CompactString, ToCompactString};
 use ratatui::prelude::*;
 use unicode_width::UnicodeWidthStr;

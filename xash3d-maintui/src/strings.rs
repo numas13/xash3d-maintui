@@ -1,7 +1,9 @@
-use std::{borrow::Cow, char, collections::HashMap, ffi::CStr, fmt::Write, str};
+use core::{char, ffi::CStr, fmt::Write, str};
 
+use alloc::{borrow::Cow, string::String};
 use compact_str::CompactString;
 use csz::CStrArray;
+use hashbrown::HashMap;
 use xash3d_ui::{
     cell::SyncOnceCell,
     cvar::CVarFlags,

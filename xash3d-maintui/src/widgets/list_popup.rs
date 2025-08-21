@@ -1,4 +1,4 @@
-use std::{
+use core::{
     cmp,
     ops::{Deref, DerefMut},
 };

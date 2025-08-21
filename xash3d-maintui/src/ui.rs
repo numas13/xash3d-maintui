@@ -5,8 +5,9 @@ pub mod sound;
 pub mod symbols;
 pub mod utils;
 
-use std::ffi::c_int;
+use core::ffi::c_int;
 
+use alloc::{boxed::Box, vec::Vec};
 use csz::CStrThin;
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;

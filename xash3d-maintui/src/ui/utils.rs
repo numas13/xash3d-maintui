@@ -1,5 +1,6 @@
-use std::{cmp, ffi::CStr};
+use core::{cmp, ffi::CStr};
 
+use alloc::string::String;
 use ratatui::{
     prelude::*,
     widgets::{Block, Borders, ListState, Paragraph, TableState, Wrap},

@@ -11,6 +11,8 @@ name = "menu"
 crate-type = ["cdylib"]
 
 [features]
+default = ["std"]
+std = ["xash3d-ratatui/std"]
 bundled = ["xash3d-ratatui/bundled"]
 
 [dependencies]
@@ -20,10 +22,12 @@ log.workspace = true
 csz.workspace = true
 ratatui.workspace = true
 res.workspace = true
+hashbrown.workspace = true
 xash3d-protocol.git = "https://github.com/FWGS/xash3d-master.git"
 xash3d-protocol.default-features = false
 xash3d-protocol.features = ["alloc"]
 xash3d-ui.workspace = true
-xash3d-ratatui = { version = "0.1.0", path = "../xash3d-ratatui" }
+# FIXME: remove std feature after upgrade to ratatui-0.30
+xash3d-ratatui = { version = "0.1.0", path = "../xash3d-ratatui", features = ["std"] }
 unicode-width = "0.2"
 compact_str = { version = "0.8", default-features = false }

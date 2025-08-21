@@ -1,11 +1,11 @@
-use std::{
+use core::{
     cell::RefCell,
     ffi::CStr,
     fmt::{self, Write},
-    rc::Rc,
     str,
 };
 
+use alloc::{rc::Rc, vec::Vec};
 use compact_str::{CompactString, ToCompactString};
 use csz::CStrArray;
 use ratatui::prelude::*;

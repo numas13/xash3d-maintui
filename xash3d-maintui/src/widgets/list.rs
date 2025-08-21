@@ -1,5 +1,6 @@
-use std::ops::{Deref, DerefMut, Index};
+use core::ops::{Deref, DerefMut, Index};
 
+use alloc::{string::ToString, vec::Vec};
 use compact_str::{CompactString, ToCompactString};
 use ratatui::{
     prelude::*,

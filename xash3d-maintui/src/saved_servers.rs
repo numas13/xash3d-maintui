@@ -1,5 +1,6 @@
-use std::{fmt::Write, str};
+use core::{fmt::Write, str};
 
+use alloc::{string::String, vec::Vec};
 use xash3d_ui::{engine, parser::Tokens, raw::netadr_s};
 
 use crate::server_info::Protocol;

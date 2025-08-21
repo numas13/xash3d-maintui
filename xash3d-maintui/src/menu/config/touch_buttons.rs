@@ -1,5 +1,6 @@
-use std::ffi::c_int;
+use core::ffi::c_int;
 
+use alloc::vec::Vec;
 use compact_str::{CompactString, ToCompactString};
 use csz::CStrThin;
 use ratatui::prelude::*;

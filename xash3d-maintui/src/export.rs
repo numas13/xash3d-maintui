@@ -1,4 +1,4 @@
-use std::{
+use core::{
     cell::{Ref, RefCell, RefMut},
     ffi::c_int,
 };
@@ -79,7 +79,9 @@ impl UiDll for Instance {
 }
 
 export_dll!(Instance, pre {
-    std::panic::set_hook(Box::new(|info| {
+    #[cfg(feature = "std")]
+    std::panic::set_hook(alloc::boxed::Box::new(|info| {
+        use alloc::string::String;
         let payload = info
             .payload()
             .downcast_ref::<&str>()

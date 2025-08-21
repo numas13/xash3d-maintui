@@ -1,4 +1,4 @@
-use std::cmp;
+use core::cmp;
 
 use compact_str::CompactString;
 use ratatui::prelude::*;

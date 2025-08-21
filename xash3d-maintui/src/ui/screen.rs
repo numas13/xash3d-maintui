@@ -1,4 +1,4 @@
-use std::ffi::c_int;
+use core::ffi::c_int;
 
 use ratatui::layout::{Position, Rect, Size};
 use xash3d_ratatui::XashBackend;

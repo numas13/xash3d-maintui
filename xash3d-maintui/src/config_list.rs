@@ -4,8 +4,9 @@ mod button;
 mod entry;
 mod label;
 
-use std::ffi::CStr;
+use core::ffi::CStr;
 
+use alloc::{boxed::Box, vec::Vec};
 use compact_str::ToCompactString;
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;

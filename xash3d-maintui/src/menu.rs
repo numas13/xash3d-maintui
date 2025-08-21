@@ -6,6 +6,8 @@ mod main;
 mod saves;
 mod test;
 
+use alloc::boxed::Box;
+
 macro_rules! define_menu_items {
     ($($name:ident = $text:expr, $hint:expr;)*) => {
         $(const $name: &str = $text;)*

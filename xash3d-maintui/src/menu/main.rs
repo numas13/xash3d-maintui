@@ -1,5 +1,6 @@
-use std::ffi::{c_int, CStr};
+use core::ffi::{c_int, CStr};
 
+use alloc::vec::Vec;
 use compact_str::{CompactString, ToCompactString};
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;

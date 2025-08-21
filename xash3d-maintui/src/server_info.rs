@@ -1,4 +1,4 @@
-use std::{fmt, str::FromStr};
+use core::{fmt, str::FromStr};
 
 use compact_str::{CompactString, ToCompactString};
 use xash3d_protocol::color::trim_color;

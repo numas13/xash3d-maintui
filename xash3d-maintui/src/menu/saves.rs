@@ -1,8 +1,6 @@
-use std::{
-    ffi::{CStr, CString},
-    str,
-};
+use core::{ffi::CStr, str};
 
+use alloc::ffi::CString;
 use compact_str::CompactString;
 use libc::c_int;
 use ratatui::{

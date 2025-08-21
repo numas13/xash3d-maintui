@@ -1,4 +1,4 @@
-use std::ffi::CStr;
+use core::ffi::CStr;
 
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;

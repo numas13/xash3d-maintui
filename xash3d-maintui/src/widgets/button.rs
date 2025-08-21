@@ -1,3 +1,4 @@
+use alloc::string::String;
 use ratatui::prelude::*;
 
 use crate::{i18n, strings::strings};

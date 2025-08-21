@@ -1,8 +1,6 @@
-use std::{
-    ops::{Deref, DerefMut},
-    rc::Rc,
-};
+use core::ops::{Deref, DerefMut};
 
+use alloc::{rc::Rc, vec::Vec};
 use ratatui::{
     prelude::*,
     widgets::{HighlightSpacing, Row, Table, TableState},

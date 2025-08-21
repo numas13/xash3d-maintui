@@ -403,6 +403,7 @@ dependencies = [
  "bitflags",
  "compact_str",
  "csz",
+ "hashbrown",
  "libc",
  "log",
  "ratatui",

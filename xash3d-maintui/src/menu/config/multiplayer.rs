@@ -1,10 +1,10 @@
-use std::{
+use core::{
     cell::RefCell,
-    ffi::{c_int, CStr, CString},
+    ffi::{c_int, CStr},
     fmt::Write,
-    rc::Rc,
 };
 
+use alloc::{ffi::CString, rc::Rc, vec::Vec};
 use compact_str::{CompactString, ToCompactString};
 use csz::{CStrArray, CStrThin};
 use ratatui::prelude::*;

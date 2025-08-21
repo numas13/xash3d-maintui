@@ -1,5 +1,9 @@
-use std::{ffi::c_int, io};
+use core::ffi::c_int;
 
+#[cfg(feature = "std")]
+use std::io;
+
+use alloc::vec::Vec;
 use ratatui::{
     backend::{Backend, ClearType, WindowSize},
     buffer::Cell,
@@ -16,6 +20,8 @@ use crate::{
 const DEFAULT_FONT_SIZE: u16 = 21;
 
 const XASH_LOGO: &[u8] = include_bytes!("../data/xash_logo.png");
+
+type Result<T, E = io::Error> = core::result::Result<T, E>;
 
 fn scale_font_size(size: u16, width: c_int, _height: c_int) -> u16 {
     let scale = if width > 1920 {
@@ -203,7 +209,7 @@ impl Default for XashBackend {
 }
 
 impl Backend for XashBackend {
-    fn draw<'a, I>(&mut self, content: I) -> io::Result<()>
+    fn draw<'a, I>(&mut self, content: I) -> Result<()>
     where
         I: Iterator<Item = (u16, u16, &'a Cell)>,
     {
@@ -252,44 +258,44 @@ impl Backend for XashBackend {
         Ok(())
     }
 
-    fn hide_cursor(&mut self) -> io::Result<()> {
+    fn hide_cursor(&mut self) -> Result<()> {
         Ok(())
     }
 
-    fn show_cursor(&mut self) -> io::Result<()> {
+    fn show_cursor(&mut self) -> Result<()> {
         Ok(())
     }
 
-    fn get_cursor_position(&mut self) -> io::Result<Position> {
+    fn get_cursor_position(&mut self) -> Result<Position> {
         Ok(self.cursor)
     }
 
-    fn set_cursor_position<P: Into<Position>>(&mut self, position: P) -> io::Result<()> {
+    fn set_cursor_position<P: Into<Position>>(&mut self, position: P) -> Result<()> {
         self.cursor = position.into();
         Ok(())
     }
 
-    fn clear(&mut self) -> io::Result<()> {
+    fn clear(&mut self) -> Result<()> {
         // we always do full redraw.
         Ok(())
     }
 
-    fn size(&self) -> io::Result<Size> {
+    fn size(&self) -> Result<Size> {
         Ok(self.screen_size())
     }
 
-    fn window_size(&mut self) -> io::Result<WindowSize> {
+    fn window_size(&mut self) -> Result<WindowSize> {
         Ok(WindowSize {
             columns_rows: self.screen_size(),
             pixels: Size::new(self.width as u16, self.height as u16),
         })
     }
 
-    fn flush(&mut self) -> io::Result<()> {
+    fn flush(&mut self) -> Result<()> {
         Ok(())
     }
 
-    fn clear_region(&mut self, _: ClearType) -> io::Result<()> {
+    fn clear_region(&mut self, _: ClearType) -> Result<()> {
         // we always do full redraw.
         Ok(())
     }

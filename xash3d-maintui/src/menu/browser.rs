@@ -2,7 +2,7 @@ use std::{
     fmt::Write,
     ops::{Deref, DerefMut},
     str,
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 use compact_str::ToCompactString;
@@ -67,13 +67,13 @@ enum SortBy {
 struct ServerEntry {
     fake: bool,
     favorite: bool,
-    query_time: Instant,
+    query_time: f64,
     ping: Duration,
     info: ServerInfo,
 }
 
 impl ServerEntry {
-    fn new(query_time: Instant, info: ServerInfo) -> Self {
+    fn new(query_time: f64, info: ServerInfo) -> Self {
         Self {
             fake: false,
             favorite: false,
@@ -90,7 +90,7 @@ impl ServerEntry {
         Self {
             fake: true,
             favorite: true,
-            query_time: Instant::now(),
+            query_time: engine().time_f64(),
             ping: Duration::from_secs(999),
             info,
         }
@@ -109,7 +109,7 @@ impl ServerEntry {
     }
 
     fn update_ping(&mut self) {
-        self.ping = self.query_time.elapsed();
+        self.ping = Duration::from_secs_f64(engine().time_f64() - self.query_time);
         if self.info.protocol.is_legacy() {
             self.ping /= 2;
         }
@@ -189,7 +189,7 @@ pub struct Browser {
     state: State<Focus>,
     is_lan: bool,
     sorted: bool,
-    query_time: Instant,
+    query_time: f64,
     menu: List,
     menu_last: Option<usize>,
     sort_by: SortBy,
@@ -246,7 +246,7 @@ impl Browser {
             state: State::default(),
             is_lan,
             sorted: false,
-            query_time: Instant::now(),
+            query_time: engine().time_f64(),
             menu,
             menu_last: None,
             sort_by: SortBy::default(),
@@ -822,7 +822,7 @@ impl Menu for Browser {
     }
 
     fn reset_ping(&mut self) {
-        self.query_time = Instant::now();
+        self.query_time = engine().time_f64();
     }
 }
 

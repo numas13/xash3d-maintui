@@ -2,7 +2,6 @@ use std::{
     cell::RefCell,
     ffi::{c_int, CStr, CString},
     fmt::Write,
-    path::Path,
     rc::Rc,
 };
 
@@ -168,11 +167,11 @@ fn get_player_models() -> Vec<CompactString> {
     let mut list = vec![];
     let mut buf = CStrArray::<512>::new();
     for i in files.iter() {
-        let Ok(path) = i.to_str().map(Path::new) else {
+        let Ok(path) = i.to_str() else {
             warn!("invalid UTF-8 path {i}");
             continue;
         };
-        let Some(name) = path.file_stem().and_then(|i| i.to_str()) else {
+        let Some(name) = utils::file_stem(path) else {
             continue;
         };
         write!(buf.cursor(), "models/player/{name}/{name}.mdl").unwrap();

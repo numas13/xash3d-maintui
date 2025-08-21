@@ -1,4 +1,4 @@
-use std::{cmp, ffi::CStr, path::Path};
+use std::{cmp, ffi::CStr};
 
 use ratatui::{
     prelude::*,
@@ -202,12 +202,42 @@ pub fn pretty_size(size: u64) -> String {
     format!("{s:.f$} {}", unit.unwrap_or("PiB"))
 }
 
+pub fn file_name(mut path: &str) -> Option<&str> {
+    let mut skip = false;
+    loop {
+        path = path.trim_end_matches('/');
+        let (rest, name) = path.rsplit_once('/').unwrap_or(("", path));
+        path = rest;
+        if skip {
+            skip = false;
+            continue;
+        }
+        match name {
+            "" => return None,
+            "." => {}
+            ".." => skip = true,
+            _ => return Some(name),
+        }
+    }
+}
+
 pub fn file_stem(path: &str) -> Option<&str> {
-    Path::new(path).file_stem().and_then(|i| i.to_str())
+    let file_name = file_name(path)?;
+    match file_name.rsplit_once('.') {
+        Some(("", _)) => Some(file_name),
+        Some((stem, _)) => Some(stem),
+        _ => Some(file_name),
+    }
 }
 
 pub fn file_extension(path: &str) -> Option<&str> {
-    Path::new(path).extension().and_then(|i| i.to_str())
+    let file_name = file_name(path)?;
+    let (stem, ext) = file_name.rsplit_once('.')?;
+    if stem.is_empty() {
+        None
+    } else {
+        Some(ext)
+    }
 }
 
 #[cfg(test)]
@@ -238,5 +268,37 @@ mod tests {
         assert_eq!(f(11 * G), "11 GiB");
         assert_eq!(f(16 * T), "16 TiB");
         assert_eq!(f(24 * P), "24 PiB");
+    }
+
+    #[test]
+    fn file_name() {
+        use super::file_name;
+        assert_eq!(Some("bin"), file_name("/usr/bin/"));
+        assert_eq!(Some("foo.txt"), file_name("tmp/foo.txt"));
+        assert_eq!(Some("foo.txt"), file_name("foo.txt/."));
+        assert_eq!(Some("foo.txt"), file_name("foo.txt/.//"));
+        assert_eq!(Some("foo.txt"), file_name("foo.txt/bar/.."));
+        assert_eq!(None, file_name("foo.txt/.."));
+        assert_eq!(None, file_name("/"));
+    }
+
+    #[test]
+    fn file_stem() {
+        use super::file_stem;
+        assert_eq!("foo", file_stem("foo.").unwrap());
+        assert_eq!("foo", file_stem("foo.rs").unwrap());
+        assert_eq!("foo.tar", file_stem("foo.tar.gz").unwrap());
+        assert_eq!(".foo", file_stem(".foo.rs").unwrap());
+        assert_eq!(".foo", file_stem(".foo").unwrap());
+        assert_eq!(".foo.tar", file_stem(".foo.tar.gz").unwrap());
+    }
+
+    #[test]
+    fn file_extension() {
+        use super::file_extension;
+        assert_eq!("rs", file_extension("foo.rs").unwrap());
+        assert_eq!("gz", file_extension("foo.tar.gz").unwrap());
+        assert_eq!(None, file_extension(".rs"));
+        assert_eq!("rs", file_extension("..rs").unwrap());
     }
 }

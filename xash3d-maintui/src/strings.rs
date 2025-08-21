@@ -1,5 +1,6 @@
 use std::{borrow::Cow, char, collections::HashMap, ffi::CStr, fmt::Write, str};
 
+use compact_str::CompactString;
 use csz::CStrArray;
 use xash3d_ui::{
     cell::SyncOnceCell,
@@ -15,7 +16,7 @@ const UI_LANGUAGE: &CStr = c"ui_language";
 
 #[derive(Default)]
 pub struct Strings {
-    map: HashMap<String, String>,
+    map: HashMap<CompactString, CompactString>,
 }
 
 impl Strings {
@@ -88,7 +89,7 @@ impl Strings {
             }
             let value = escape_string(tokens.parse()?);
             if !value.is_empty() {
-                self.map.insert(name.to_string(), value);
+                self.map.insert(name.into(), value.into());
             }
         }
         tokens.expect("}")?;

@@ -3,6 +3,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
+use compact_str::{CompactString, ToCompactString};
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
 
@@ -13,18 +14,18 @@ use crate::{
 };
 
 pub struct ListPopup {
-    title: String,
+    title: CompactString,
     list: List,
     width: u16,
 }
 
 impl ListPopup {
-    pub fn new<T>(title: impl ToString, items: T) -> Self
+    pub fn new<T>(title: impl ToCompactString, items: T) -> Self
     where
         T: IntoIterator,
-        T::Item: ToString,
+        T::Item: ToCompactString,
     {
-        let title = title.to_string();
+        let title = title.to_compact_string();
 
         let mut list = List::new_first(items);
         list.set_style(Style::default().black().on_gray());

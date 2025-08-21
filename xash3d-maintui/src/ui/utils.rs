@@ -1,4 +1,4 @@
-use std::{cmp, ffi::CStr};
+use std::{cmp, ffi::CStr, path::Path};
 
 use ratatui::{
     prelude::*,
@@ -200,6 +200,14 @@ pub fn pretty_size(size: u64) -> String {
     let s = size as f64 / d as f64;
     let f = if s.fract() < 0.1 { 0 } else { 1 };
     format!("{s:.f$} {}", unit.unwrap_or("PiB"))
+}
+
+pub fn file_stem(path: &str) -> Option<&str> {
+    Path::new(path).file_stem().and_then(|i| i.to_str())
+}
+
+pub fn file_extension(path: &str) -> Option<&str> {
+    Path::new(path).extension().and_then(|i| i.to_str())
 }
 
 #[cfg(test)]

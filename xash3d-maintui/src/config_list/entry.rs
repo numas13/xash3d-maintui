@@ -1,5 +1,6 @@
 use std::ffi::CStr;
 
+use compact_str::{CompactString, ToCompactString};
 use ratatui::prelude::*;
 use unicode_width::UnicodeWidthStr;
 use xash3d_ratatui::XashBackend;
@@ -16,11 +17,11 @@ use super::{CVarBackend, ConfigAction, ConfigBackend, ConfigItem};
 const LABEL_WIDTH: u16 = 32;
 
 pub struct ConfigEntryBuilder<T> {
-    label: Option<String>,
-    hint: Option<String>,
-    note: Option<String>,
+    label: Option<CompactString>,
+    hint: Option<CompactString>,
+    note: Option<CompactString>,
     widget: T,
-    fixed_value: Option<String>,
+    fixed_value: Option<CompactString>,
 }
 
 impl<T> ConfigEntryBuilder<T> {
@@ -34,23 +35,23 @@ impl<T> ConfigEntryBuilder<T> {
         }
     }
 
-    pub fn label(mut self, label: impl ToString) -> Self {
-        self.label = Some(label.to_string());
+    pub fn label(mut self, label: impl ToCompactString) -> Self {
+        self.label = Some(label.to_compact_string());
         self
     }
 
-    pub fn note(mut self, note: impl ToString) -> Self {
-        self.note = Some(note.to_string());
+    pub fn note(mut self, note: impl ToCompactString) -> Self {
+        self.note = Some(note.to_compact_string());
         self
     }
 
-    pub fn hint(mut self, hint: impl ToString) -> Self {
-        self.hint = Some(hint.to_string());
+    pub fn hint(mut self, hint: impl ToCompactString) -> Self {
+        self.hint = Some(hint.to_compact_string());
         self
     }
 
-    pub fn fixed_value(mut self, value: impl ToString) -> Self {
-        self.fixed_value = Some(value.to_string());
+    pub fn fixed_value(mut self, value: impl ToCompactString) -> Self {
+        self.fixed_value = Some(value.to_compact_string());
         self
     }
 
@@ -84,12 +85,12 @@ impl<T> ConfigEntryBuilder<T> {
 }
 
 pub struct ConfigEntry<V, T> {
-    label: Option<String>,
-    hint: Option<String>,
-    note: Option<String>,
+    label: Option<CompactString>,
+    hint: Option<CompactString>,
+    note: Option<CompactString>,
     widget: T,
     backend: Box<dyn ConfigBackend<V>>,
-    fixed_value: Option<String>,
+    fixed_value: Option<CompactString>,
 }
 
 impl<T> ConfigEntry<(), T> {
@@ -119,10 +120,10 @@ impl ConfigEntry<(), ()> {
         ConfigEntryBuilder::new(Input::new())
     }
 
-    pub fn list<T>(title: impl ToString, items: T) -> ConfigEntryBuilder<ListPopup>
+    pub fn list<T>(title: impl ToCompactString, items: T) -> ConfigEntryBuilder<ListPopup>
     where
         T: IntoIterator,
-        T::Item: ToString,
+        T::Item: ToCompactString,
     {
         ConfigEntryBuilder::new(ListPopup::new(title, items))
     }
@@ -402,7 +403,7 @@ impl ConfigItem for ConfigEntry<usize, ListPopup> {
     }
 }
 
-impl ConfigItem for ConfigEntry<String, Input> {
+impl ConfigItem for ConfigEntry<CompactString, Input> {
     fn get_hint(&self) -> Option<&str> {
         self.hint.as_deref()
     }
@@ -436,7 +437,7 @@ impl ConfigItem for ConfigEntry<String, Input> {
     fn item_key_event_grab(&mut self, backend: &XashBackend, event: KeyEvent) -> ConfigAction {
         match self.widget.key_event(backend, event) {
             ConfirmResult::Ok => {
-                self.backend.write(self.widget.value().to_string());
+                self.backend.write(self.widget.value().into());
                 self.widget.show_cursor(false);
                 ConfigAction::Confirm
             }

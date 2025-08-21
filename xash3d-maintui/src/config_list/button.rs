@@ -1,3 +1,4 @@
+use compact_str::{CompactString, ToCompactString};
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
 
@@ -9,14 +10,14 @@ use crate::{
 use super::{ConfigAction, ConfigItem};
 
 pub struct Button<T> {
-    label: String,
+    label: CompactString,
     func: T,
 }
 
 impl<T> Button<T> {
-    pub fn new(label: impl ToString, func: T) -> Self {
+    pub fn new(label: impl ToCompactString, func: T) -> Self {
         Self {
-            label: label.to_string(),
+            label: label.to_compact_string(),
             func,
         }
     }

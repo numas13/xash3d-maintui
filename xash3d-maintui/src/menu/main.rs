@@ -1,5 +1,6 @@
 use std::ffi::{c_int, CStr};
 
+use compact_str::{CompactString, ToCompactString};
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
 use xash3d_ui::{engine, globals};
@@ -56,8 +57,8 @@ pub struct MainMenu {
     is_client_active: bool,
     is_single: bool,
     developer: c_int,
-    hint_hazard_course: String,
-    game_title: String,
+    hint_hazard_course: CompactString,
+    game_title: CompactString,
 }
 
 impl MainMenu {
@@ -68,7 +69,8 @@ impl MainMenu {
         let title = info.title.to_str().unwrap_or("<invalid utf8>");
         let hint_hazard_course = i18n::HAZARD_COURSE_HINT
             .localize()
-            .replace("{title}", title);
+            .replace("{title}", title)
+            .into();
 
         let mut menu = List::empty();
         menu.set_bindings([
@@ -103,7 +105,7 @@ impl MainMenu {
             is_single: false,
             developer: -1,
             hint_hazard_course,
-            game_title: info.title.to_string(),
+            game_title: info.title.to_compact_string(),
         }
     }
 
@@ -171,7 +173,7 @@ impl MainMenu {
         }
 
         self.menu.clear();
-        self.menu.extend(items.iter().map(|i| i.to_string()));
+        self.menu.extend(&items);
     }
 
     fn get_menu_hint(&self) -> Option<&str> {

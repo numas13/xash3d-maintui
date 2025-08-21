@@ -1,9 +1,9 @@
 use std::{
     ffi::{CStr, CString},
-    path::Path,
     str,
 };
 
+use compact_str::CompactString;
 use libc::c_int;
 use ratatui::{
     prelude::*,
@@ -45,18 +45,18 @@ enum Focus {
 
 #[derive(Default)]
 struct SaveInfo {
-    filename: String,
-    comment: String,
-    datetime: String,
+    filename: CompactString,
+    comment: CompactString,
+    datetime: CompactString,
 }
 
 struct SavePreview {
-    filename: String,
+    filename: CompactString,
     picture: c_int,
 }
 
 impl SavePreview {
-    fn new(filename: String) -> Self {
+    fn new(filename: CompactString) -> Self {
         let path = format!("save/{filename}.bmp");
         let picture = engine().pic_load(path, None, 0);
         Self { filename, picture }
@@ -101,27 +101,31 @@ impl SavesMenu {
 
         if self.is_save {
             self.table.push(SaveInfo {
-                filename: String::from("new"),
-                comment: i18n::NEW_SAVE.localize().to_string(),
-                datetime: i18n::NOW.localize().to_string(),
+                filename: "new".into(),
+                comment: i18n::NEW_SAVE.localize().into(),
+                datetime: i18n::NOW.localize().into(),
             });
         }
 
         let engine = engine();
         let filenames = engine.get_files_list(c"save/*.sav", true);
-        for i in filenames.iter() {
+        for save_path in filenames.iter() {
             let mut buf = [0; 256];
-            if !engine.get_save_comment(i, &mut buf) {
+            if !engine.get_save_comment(save_path, &mut buf) {
                 // TODO:
                 continue;
             }
 
-            let Ok(filename) = i.to_str() else { continue };
-            let Some(filename) = Path::new(filename).file_stem() else {
+            let Some(filename) = save_path
+                .to_str()
+                .ok()
+                .and_then(utils::file_stem)
+                .map(|i| i.into())
+            else {
                 continue;
             };
 
-            let mut comment = String::with_capacity(CS_SIZE);
+            let mut comment = CompactString::default();
             let mut title = &buf[..CS_SIZE - 1];
 
             // handle `[auto]`, `[quick]`, etc
@@ -148,7 +152,7 @@ impl SavesMenu {
                 comment.push_str(s.localize());
             }
 
-            let mut datetime = String::new();
+            let mut datetime = CompactString::default();
             let date = CStr::from_bytes_until_nul(&buf[CS_SIZE..]);
             if let Ok(s) = date {
                 if let Ok(s) = s.to_str() {
@@ -164,7 +168,7 @@ impl SavesMenu {
             }
 
             self.table.push(SaveInfo {
-                filename: filename.to_string_lossy().to_string(),
+                filename,
                 comment,
                 datetime,
             });

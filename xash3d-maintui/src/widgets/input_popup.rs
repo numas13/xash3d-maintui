@@ -1,3 +1,4 @@
+use compact_str::CompactString;
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
 
@@ -17,7 +18,7 @@ enum Focus {
 
 pub struct InputPopup {
     state: State<Focus>,
-    title: String,
+    title: CompactString,
     input: Input,
     cancel: Button,
     yes: Button,
@@ -27,7 +28,7 @@ impl InputPopup {
     pub fn new(title: &str, input: Input) -> Self {
         Self {
             state: Default::default(),
-            title: title.localize().to_string(),
+            title: title.localize().into(),
             input,
             cancel: Button::cancel(),
             yes: Button::yes(),
@@ -87,13 +88,13 @@ impl WidgetMut<InputResult> for InputPopup {
                     return InputResult::Cancel;
                 } else if self.yes.area.contains(cursor) {
                     self.state.reset();
-                    return InputResult::Ok(self.input.value().to_string());
+                    return InputResult::Ok(self.input.value().into());
                 }
             }
             _ => match self.input.key_event(backend, event) {
                 ConfirmResult::Ok => {
                     return match self.state.focus() {
-                        Focus::Yes => InputResult::Ok(self.input.value().to_string()),
+                        Focus::Yes => InputResult::Ok(self.input.value().into()),
                         Focus::Cancel => InputResult::Cancel,
                     }
                 }

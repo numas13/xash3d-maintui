@@ -1,3 +1,4 @@
+use compact_str::{CompactString, ToCompactString};
 use ratatui::{
     prelude::*,
     widgets::{Paragraph, Wrap},
@@ -22,19 +23,19 @@ pub struct ConfirmPopup {
     state: State<Focus>,
     cancel: Button,
     yes: Button,
-    title: String,
-    content: String,
+    title: CompactString,
+    content: CompactString,
     content_width: u16,
 }
 
 impl ConfirmPopup {
-    pub fn with_title(title: impl ToString, content: &str) -> Self {
+    pub fn with_title(title: impl ToCompactString, content: &str) -> Self {
         Self {
             state: Default::default(),
             cancel: Button::cancel(),
             yes: Button::yes(),
-            title: title.to_string(),
-            content: content.to_string(),
+            title: title.to_compact_string(),
+            content: content.to_compact_string(),
             content_width: content.width() as u16,
         }
     }

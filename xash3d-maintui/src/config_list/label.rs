@@ -1,3 +1,4 @@
+use compact_str::{CompactString, ToCompactString};
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
 
@@ -6,13 +7,13 @@ use crate::{input::KeyEvent, ui::Screen};
 use super::{ConfigAction, ConfigItem};
 
 pub struct Label {
-    label: String,
+    label: CompactString,
 }
 
 impl Label {
-    pub fn new(label: impl ToString) -> Self {
+    pub fn new(label: impl ToCompactString) -> Self {
         Self {
-            label: label.to_string(),
+            label: label.to_compact_string(),
         }
     }
 }

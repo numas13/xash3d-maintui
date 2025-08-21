@@ -1,5 +1,6 @@
 use std::{fmt, str::FromStr};
 
+use compact_str::{CompactString, ToCompactString};
 use xash3d_protocol::color::trim_color;
 use xash3d_ui::raw::netadr_s;
 
@@ -52,10 +53,10 @@ impl fmt::Display for Protocol {
 #[derive(Clone)]
 pub struct ServerInfo {
     pub addr: netadr_s,
-    pub host: String,
-    pub host_cmp: String,
-    pub map: String,
-    pub gamedir: String,
+    pub host: CompactString,
+    pub host_cmp: CompactString,
+    pub map: CompactString,
+    pub gamedir: CompactString,
     pub numcl: u32,
     pub maxcl: u32,
     pub dm: bool,
@@ -71,10 +72,10 @@ impl ServerInfo {
     fn new(addr: netadr_s) -> Self {
         Self {
             addr,
-            host: String::new(),
-            host_cmp: String::new(),
-            map: String::new(),
-            gamedir: String::new(),
+            host: CompactString::default(),
+            host_cmp: CompactString::default(),
+            map: CompactString::default(),
+            gamedir: CompactString::default(),
             numcl: 0,
             maxcl: 0,
             dm: false,
@@ -86,9 +87,13 @@ impl ServerInfo {
         }
     }
 
-    pub fn with_host_and_proto(addr: netadr_s, host: String, protocol: Protocol) -> Self {
+    pub fn with_host_and_proto(
+        addr: netadr_s,
+        host: impl ToCompactString,
+        protocol: Protocol,
+    ) -> Self {
         ServerInfo {
-            host,
+            host: host.to_compact_string(),
             protocol,
             ..Self::new(addr)
         }
@@ -110,9 +115,9 @@ impl ServerInfo {
                         .map(Protocol::Xash)
                         .unwrap_or_default()
                 }
-                "host" => ret.host = value.trim().to_owned(),
-                "map" => ret.map = trim_color(value).to_string(),
-                "gamedir" => ret.gamedir = trim_color(value).to_string(),
+                "host" => ret.host = value.trim().into(),
+                "map" => ret.map = trim_color(value).into(),
+                "gamedir" => ret.gamedir = trim_color(value).into(),
                 "numcl" => ret.numcl = trim_color(value).parse().unwrap_or_default(),
                 "maxcl" => ret.maxcl = trim_color(value).parse().unwrap_or_default(),
                 "legacy" => {
@@ -133,7 +138,7 @@ impl ServerInfo {
                 _ => debug!("unimplemented server info {key}={value}"),
             }
         }
-        ret.host_cmp = trim_color(&ret.host).to_lowercase();
+        ret.host_cmp = trim_color(&ret.host).to_lowercase().into();
         Some(ret)
     }
 }

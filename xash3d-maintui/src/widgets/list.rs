@@ -1,5 +1,6 @@
 use std::ops::{Deref, DerefMut, Index};
 
+use compact_str::{CompactString, ToCompactString};
 use ratatui::{
     prelude::*,
     widgets::{HighlightSpacing, StatefulWidgetRef},
@@ -78,13 +79,13 @@ pub struct List {
     highlight_style: Style,
     pub area: Rect,
     pub state: ListState,
-    items: Vec<String>,
-    bindings: Vec<(Key, String)>,
+    items: Vec<CompactString>,
+    bindings: Vec<(Key, CompactString)>,
     list: Option<ratatui::widgets::List<'static>>,
 }
 
 impl List {
-    pub fn new<T: ToString>(items: impl IntoIterator<Item = T>) -> Self {
+    pub fn new<T: ToCompactString>(items: impl IntoIterator<Item = T>) -> Self {
         Self {
             style: Style::new(),
             highlight_style: Style::new()
@@ -93,13 +94,13 @@ impl List {
                 .on_yellow(),
             area: Rect::ZERO,
             state: ListState::new(),
-            items: items.into_iter().map(|i| i.to_string()).collect(),
+            items: items.into_iter().map(|i| i.to_compact_string()).collect(),
             bindings: Vec::new(),
             list: None,
         }
     }
 
-    pub fn new_first<T: ToString>(items: impl IntoIterator<Item = T>) -> Self {
+    pub fn new_first<T: ToCompactString>(items: impl IntoIterator<Item = T>) -> Self {
         let mut ret = Self::new(items);
         ret.state.select_first();
         ret
@@ -108,10 +109,10 @@ impl List {
     pub fn set_bindings<I, T>(&mut self, iter: I)
     where
         I: IntoIterator<Item = (Key, T)>,
-        T: ToString,
+        T: ToCompactString,
     {
         self.bindings.clear();
-        let iter = iter.into_iter().map(|(k, i)| (k, i.to_string()));
+        let iter = iter.into_iter().map(|(k, i)| (k, i.to_compact_string()));
         self.bindings.extend(iter);
     }
 
@@ -146,12 +147,13 @@ impl List {
         self.list = None;
     }
 
-    pub fn push(&mut self, item: impl ToString) {
-        self.items.push(item.to_string());
+    pub fn push(&mut self, item: impl ToCompactString) {
+        self.items.push(item.to_compact_string());
     }
 
-    pub fn extend<I: IntoIterator<Item = String>>(&mut self, iter: I) {
-        self.items.extend(iter);
+    pub fn extend<T: ToCompactString, I: IntoIterator<Item = T>>(&mut self, iter: I) {
+        self.items
+            .extend(iter.into_iter().map(|i| i.to_compact_string()));
     }
 
     pub fn len(&self) -> usize {
@@ -162,8 +164,8 @@ impl List {
         self.items.get(index).map(|i| i.as_str())
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &String> {
-        self.items.iter()
+    pub fn iter(&self) -> impl Iterator<Item = &str> {
+        self.items.iter().map(|i| i.as_str())
     }
 
     fn get_binding(&self, item: &str) -> Option<Key> {

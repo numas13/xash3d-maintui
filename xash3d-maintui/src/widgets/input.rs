@@ -1,5 +1,6 @@
 use std::cmp;
 
+use compact_str::CompactString;
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
 use xash3d_ui::engine;
@@ -29,7 +30,7 @@ impl InputBuilder {
 pub struct Input {
     cursor: u16,
     style: Style,
-    value: String,
+    value: CompactString,
     password: bool,
     show_cursor: bool,
 }
@@ -43,7 +44,7 @@ impl Input {
         InputBuilder(Self {
             cursor: 0,
             style: Style::default(),
-            value: String::new(),
+            value: CompactString::default(),
             password: false,
             show_cursor: false,
         })
@@ -207,13 +208,12 @@ impl WidgetMut<ConfirmResult> for Input {
     }
 }
 
-// TODO: return str slice
-impl Value<String> for Input {
-    fn value(&self) -> String {
+impl Value<CompactString> for Input {
+    fn value(&self) -> CompactString {
         self.value.clone()
     }
 
-    fn set_value(&mut self, value: String) {
+    fn set_value(&mut self, value: CompactString) {
         self.value = value;
         self.cursor_to_end();
     }

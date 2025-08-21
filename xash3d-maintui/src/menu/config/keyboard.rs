@@ -3,6 +3,7 @@ use std::{
     str,
 };
 
+use compact_str::{CompactString, ToCompactString};
 use ratatui::{
     prelude::*,
     widgets::{Block, Borders, Cell, Paragraph, Row, Table},
@@ -41,11 +42,11 @@ enum Focus {
 }
 
 enum Item {
-    Text(String),
+    Text(CompactString),
     Binding {
-        bind: String,
-        name: String,
-        keys: [String; 2],
+        bind: CompactString,
+        name: CompactString,
+        keys: [CompactString; 2],
     },
 }
 
@@ -68,7 +69,7 @@ impl Controls {
         this
     }
 
-    fn get_keys(&self, name: &str) -> [String; 2] {
+    fn get_keys(&self, name: &str) -> [CompactString; 2] {
         let eng = engine();
 
         let mut keys = [-1; 2];
@@ -86,9 +87,9 @@ impl Controls {
 
         let keynum_to_str = |keynum| {
             if keynum != -1 {
-                eng.keynum_to_str(keynum).to_string()
+                eng.keynum_to_str(keynum).to_compact_string()
             } else {
-                "".to_string()
+                CompactString::default()
             }
         };
         [keynum_to_str(keys[0]), keynum_to_str(keys[1])]
@@ -116,13 +117,13 @@ impl Controls {
     fn load_keys(&mut self) {
         self.table.clear();
         Self::load_file(KEYBOARD_ACTION_LIST_PATH, |bind, name| {
-            let name = name.localize().to_string();
+            let name = name.localize().into();
             if bind == "blank" {
                 self.table.push(Item::Text(name));
             } else {
                 let keys = self.get_keys(bind);
                 self.table.push(Item::Binding {
-                    bind: bind.to_string(),
+                    bind: bind.into(),
                     name,
                     keys,
                 });

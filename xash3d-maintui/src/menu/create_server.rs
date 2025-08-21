@@ -6,6 +6,7 @@ use std::{
     str,
 };
 
+use compact_str::{CompactString, ToCompactString};
 use csz::CStrArray;
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
@@ -35,16 +36,16 @@ const CVAR_PUBLIC: &CStr = c"public";
 const CVAR_SV_NAT: &CStr = c"sv_nat";
 
 struct Map {
-    name: String,
+    name: CompactString,
     #[allow(dead_code)]
-    title: String,
+    title: CompactString,
 }
 
 fn parse_map_list(s: &str) -> Result<Vec<Map>, ParseError<'_>> {
     let mut list = Vec::new();
     list.push(Map {
-        name: i18n::RANDOM_MAP.localize().to_string(),
-        title: i18n::RANDOM_MAP_TITLE.localize().to_string(),
+        name: i18n::RANDOM_MAP.localize().into(),
+        title: i18n::RANDOM_MAP_TITLE.localize().into(),
     });
     let mut tokens = Tokens::new(s);
     while let Some(name) = tokens.next() {
@@ -53,8 +54,8 @@ fn parse_map_list(s: &str) -> Result<Vec<Map>, ParseError<'_>> {
             break;
         };
         list.push(Map {
-            name: name?.to_owned(),
-            title: title?.to_owned(),
+            name: name?.into(),
+            title: title?.into(),
         })
     }
     Ok(list)
@@ -83,9 +84,9 @@ fn get_map_list() -> Option<Vec<Map>> {
 }
 
 struct ServerParameters {
-    server_name: String,
+    server_name: CompactString,
     map_index: usize,
-    password: String,
+    password: CompactString,
     max_players: u32,
     nat: bool,
 }
@@ -93,15 +94,15 @@ struct ServerParameters {
 impl Default for ServerParameters {
     fn default() -> Self {
         let engine = engine();
-        let mut server_name = engine.get_cvar_string(CVAR_HOSTNAME).to_string();
+        let mut server_name = engine.get_cvar_string(CVAR_HOSTNAME);
         if server_name.is_empty() {
-            server_name.push_str("Xash3D Server");
+            server_name = c"Xash3D Server".into();
         }
-        let password = engine.get_cvar_string(CVAR_SV_PASSWORD).to_string();
+        let password = engine.get_cvar_string(CVAR_SV_PASSWORD);
         Self {
-            server_name,
+            server_name: server_name.to_compact_string(),
             map_index: 0,
-            password,
+            password: password.to_compact_string(),
             max_players: 16,
             nat: engine.get_cvar_float(CVAR_SV_NAT) != 0.0,
         }
@@ -192,12 +193,12 @@ impl CreateServer {
 
     fn server_name_field(self: &Rc<Self>) -> impl ConfigItem {
         struct ServerName(Rc<CreateServer>);
-        impl ConfigBackend<String> for ServerName {
-            fn read(&self) -> Option<String> {
+        impl ConfigBackend<CompactString> for ServerName {
+            fn read(&self) -> Option<CompactString> {
                 Some(self.0.parms.borrow().server_name.clone())
             }
 
-            fn write(&mut self, value: String) {
+            fn write(&mut self, value: CompactString) {
                 self.0.parms.borrow_mut().server_name = value;
             }
         }
@@ -208,12 +209,12 @@ impl CreateServer {
 
     fn password_field(self: &Rc<Self>) -> impl ConfigItem {
         struct Password(Rc<CreateServer>);
-        impl ConfigBackend<String> for Password {
-            fn read(&self) -> Option<String> {
+        impl ConfigBackend<CompactString> for Password {
+            fn read(&self) -> Option<CompactString> {
                 Some(self.0.parms.borrow().password.clone())
             }
 
-            fn write(&mut self, value: String) {
+            fn write(&mut self, value: CompactString) {
                 self.0.parms.borrow_mut().password = value;
             }
         }
@@ -269,7 +270,7 @@ impl CreateServer {
             }
         }
         let title = i18n::MAX_PLAYERS_TITLE.localize();
-        let items = (1..=32).map(|i| i.to_string());
+        let items = (1..=32).map(|i| i.to_compact_string());
         let widget = ListPopup::new(title, items);
         ConfigEntry::builder(widget).build(B(self.clone()))
     }

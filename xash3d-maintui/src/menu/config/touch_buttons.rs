@@ -1,5 +1,6 @@
 use std::ffi::c_int;
 
+use compact_str::{CompactString, ToCompactString};
 use csz::CStrThin;
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
@@ -23,9 +24,9 @@ const CONTEXT_REMOVE: &str = "Remove";
 
 #[allow(dead_code)]
 struct Button {
-    name: String,
-    texture: String,
-    command: String,
+    name: CompactString,
+    texture: CompactString,
+    command: CompactString,
     color: RGBA,
     flags: c_int,
 }
@@ -225,9 +226,9 @@ impl Menu for TouchButtonsConfig {
         flags: c_int,
     ) {
         let button = Button {
-            name: name.to_string(),
-            texture: texture.to_string(),
-            command: command.to_string(),
+            name: name.to_compact_string(),
+            texture: texture.to_compact_string(),
+            command: command.to_compact_string(),
             color,
             flags,
         };

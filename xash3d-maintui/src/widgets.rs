@@ -10,6 +10,7 @@ mod scrollbar;
 mod slider;
 mod table;
 
+use compact_str::CompactString;
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
 
@@ -38,7 +39,7 @@ pub enum ConfirmResult {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
-pub enum InputResult<T = String> {
+pub enum InputResult<T = CompactString> {
     None,
     Cancel,
     Ok(T),

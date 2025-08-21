@@ -5,6 +5,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use compact_str::ToCompactString;
 use csz::CStrArray;
 use ratatui::{
     prelude::*,
@@ -84,7 +85,7 @@ impl ServerEntry {
 
     fn new_favorite_fake(saved: &SavedServer) -> Self {
         let addr = saved.addr();
-        let host = engine().addr_to_string_ref(addr).to_string();
+        let host = engine().addr_to_string_ref(addr).to_compact_string();
         let info = ServerInfo::with_host_and_proto(*addr, host, saved.protocol());
         Self {
             fake: true,

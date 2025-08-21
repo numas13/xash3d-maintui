@@ -6,6 +6,7 @@ use std::{
     rc::Rc,
 };
 
+use compact_str::{CompactString, ToCompactString};
 use csz::{CStrArray, CStrThin};
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
@@ -98,7 +99,7 @@ const COLOR_ENBY: &[RGBA] = &[
 ];
 
 struct LogoColor {
-    name: String,
+    name: CompactString,
     value: &'static CStr,
     colors: &'static [RGBA],
 }
@@ -106,34 +107,34 @@ struct LogoColor {
 impl LogoColor {
     fn new(name: &str, value: &'static CStr, colors: &'static [RGBA]) -> Self {
         Self {
-            name: name.localize().to_string(),
+            name: name.localize().into(),
             value,
             colors,
         }
     }
 }
 
-fn get_logo_list() -> Vec<(CString, String)> {
+fn get_logo_list() -> Vec<(CString, CompactString)> {
     let files = engine().get_files_list(c"logos/*.*", false);
     let mut list = vec![];
     for i in files.iter() {
-        let Ok(path) = i.to_str().map(Path::new) else {
+        let Ok(path) = i.to_str() else {
             warn!("invalid UTF-8 path {i}");
             continue;
         };
-        let Some(ext) = path.extension() else {
+        let Some(ext) = utils::file_extension(path) else {
             continue;
         };
         if !["bmp", "png"].iter().any(|i| ext.eq_ignore_ascii_case(i)) {
             continue;
         }
-        let Some(name) = path.file_stem() else {
+        let Some(name) = utils::file_stem(path) else {
             continue;
         };
         if name.eq_ignore_ascii_case("remapped") {
             continue;
         }
-        list.push((i.into(), name.to_string_lossy().to_string()));
+        list.push((i.into(), name.into()));
     }
     list
 }
@@ -161,7 +162,7 @@ fn get_logo_color_list() -> Vec<LogoColor> {
     colors
 }
 
-fn get_player_models() -> Vec<String> {
+fn get_player_models() -> Vec<CompactString> {
     let engine = engine();
     let files = engine.get_files_list(c"models/player/*", false);
     let mut list = vec![];
@@ -176,7 +177,7 @@ fn get_player_models() -> Vec<String> {
         };
         write!(buf.cursor(), "models/player/{name}/{name}.mdl").unwrap();
         if engine.file_exists(buf.as_c_str(), false) {
-            list.push(name.to_string());
+            list.push(name.into());
         }
     }
     list
@@ -194,7 +195,7 @@ impl LogoPreview {
 }
 
 struct Logo {
-    names: Vec<(CString, String)>,
+    names: Vec<(CString, CompactString)>,
     colors: Vec<LogoColor>,
     preview: RefCell<Option<LogoPreview>>,
 }
@@ -296,7 +297,7 @@ impl ModelPreview {
 }
 
 struct Model {
-    names: Vec<String>,
+    names: Vec<CompactString>,
     preview: RefCell<Option<ModelPreview>>,
 }
 
@@ -370,12 +371,12 @@ impl ConfigBackend<f32> for ModelColorConfig {
 
 struct PlayerName;
 
-impl ConfigBackend<String> for PlayerName {
-    fn read(&self) -> Option<String> {
-        Some(engine().get_cvar_string(c"name").to_string())
+impl ConfigBackend<CompactString> for PlayerName {
+    fn read(&self) -> Option<CompactString> {
+        Some(engine().get_cvar_string(c"name").to_compact_string())
     }
 
-    fn write(&mut self, value: String) {
+    fn write(&mut self, value: CompactString) {
         engine().set_cvar_string(c"name", value.as_str());
     }
 }

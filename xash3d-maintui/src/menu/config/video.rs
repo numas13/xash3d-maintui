@@ -3,6 +3,7 @@ use std::{
     fmt::Write,
 };
 
+use compact_str::{CompactString, ToCompactString};
 use csz::{CStrArray, CStrThin};
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
@@ -21,7 +22,7 @@ mod i18n {
 
 const FPS_VALUES: &[u16] = &[30, 60, 75, 120, 144, 244, 360, 480, 960];
 
-fn get_renderer_name(short: &CStrThin) -> Option<String> {
+fn get_renderer_name(short: &CStrThin) -> Option<CompactString> {
     let engine = engine();
     let mut buf = CStrArray::new();
     let mut name = CStrArray::new();
@@ -30,20 +31,20 @@ fn get_renderer_name(short: &CStrThin) -> Option<String> {
             break;
         }
         if short == buf.as_c_str() {
-            return Some(name.to_string());
+            return Some(name.to_compact_string());
         }
     }
     None
 }
 
-fn get_loaded_renderer_name() -> String {
+fn get_loaded_renderer_name() -> CompactString {
     let short = engine().get_cvar_string(c"r_refdll_loaded");
     if !short.is_empty() {
         if let Some(name) = get_renderer_name(short) {
             return name;
         }
     }
-    String::from("invalid")
+    CompactString::new("invalid")
 }
 
 struct RemapCvar {
@@ -190,8 +191,8 @@ impl VideoConfig {
         list.add({
             let fps_values = FPS_VALUES
                 .iter()
-                .map(|i| i.to_string())
-                .chain([i18n::FPS_UNLIMITED.localize().to_string()]);
+                .map(|i| i.to_compact_string())
+                .chain([i18n::FPS_UNLIMITED.localize().into()]);
             ConfigEntry::list(i18n::FPS_LIMIT.localize(), fps_values).build(FpsLimit)
         });
         list.checkbox(i18n::VSYNC.localize(), c"gl_vsync");
@@ -199,7 +200,7 @@ impl VideoConfig {
             let renderers = (0..).map_while(|i| {
                 let mut name = CStrArray::new();
                 if engine().get_renderer(i, None, Some(&mut name)) {
-                    Some(name.to_string())
+                    Some(name.to_compact_string())
                 } else {
                     None
                 }

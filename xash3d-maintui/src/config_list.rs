@@ -6,6 +6,7 @@ mod label;
 
 use std::ffi::CStr;
 
+use compact_str::ToCompactString;
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
 
@@ -90,7 +91,7 @@ impl ConfigList {
         self.add(BackButton);
     }
 
-    pub fn label(&mut self, label: impl ToString) {
+    pub fn label(&mut self, label: impl ToCompactString) {
         self.add(Label::new(label));
     }
 
@@ -109,7 +110,7 @@ impl ConfigList {
     pub fn popup_list<T>(&mut self, label: &'static str, cvar: &'static CStr, list: T)
     where
         T: IntoIterator,
-        T::Item: ToString,
+        T::Item: ToCompactString,
     {
         self.add(ConfigEntry::list(label, list).build_for_cvar(cvar));
     }

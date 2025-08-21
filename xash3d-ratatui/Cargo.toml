@@ -14,4 +14,4 @@ libc.workspace = true
 log.workspace = true
 ratatui.workspace = true
 xash3d-ui.workspace = true
-ab_glyph = "0.2.29"
+ab_glyph = { version = "0.2.29", default-features = false, features = ["libm"] }

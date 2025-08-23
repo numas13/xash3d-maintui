@@ -1,16 +1,12 @@
 use core::ffi::c_int;
 
-#[cfg(feature = "std")]
-use std::io;
-
 use alloc::vec::Vec;
 use ratatui::{
-    backend::{Backend, ClearType, WindowSize},
     buffer::Cell,
     layout::{Position, Size},
     prelude::*,
 };
-use xash3d_ui::{color::RGBA, engine, globals, picture::Picture, raw::wrect_s, Engine};
+use xash3d_ui::{color::RGBA, engine, globals, picture::Picture, raw::wrect_s};
 
 use crate::{
     bmp::Bmp,
@@ -20,8 +16,6 @@ use crate::{
 const DEFAULT_FONT_SIZE: u16 = 21;
 
 const XASH_LOGO: &[u8] = include_bytes!("../data/xash_logo.png");
-
-type Result<T, E = io::Error> = core::result::Result<T, E>;
 
 fn scale_font_size(size: u16, width: c_int, _height: c_int) -> u16 {
     let scale = if width > 1920 {
@@ -35,19 +29,19 @@ fn scale_font_size(size: u16, width: c_int, _height: c_int) -> u16 {
 }
 
 pub struct XashBackend {
-    eng: &'static Engine,
     width: c_int,
     height: c_int,
     align: Position,
     mouse_pos: Position,
     cursor: Position,
     font_map: FontMap,
+    // temporary buffer for sorted list of cells optimized for rendering
     cells: Vec<(u16, u16, RGBA, *const Cell)>,
     bg: Picture,
 }
 
-impl XashBackend {
-    pub fn new() -> Self {
+impl Default for XashBackend {
+    fn default() -> Self {
         let mut pixel = Bmp::builder(1, 1).build();
         pixel.set_pixel(0, 0, 255, 255, 255, 255);
 
@@ -59,7 +53,6 @@ impl XashBackend {
         let bg = Picture::create(c"#mainui/backend/xash_logo.png", XASH_LOGO);
 
         let mut ret = Self {
-            eng: engine(),
             width,
             height,
             align: Position::ORIGIN,
@@ -72,12 +65,14 @@ impl XashBackend {
         ret.calc_alignment();
         ret
     }
+}
 
+impl XashBackend {
     pub fn cell_size_in_pixels(&self) -> Size {
         Size::from(self.font_map.glyph_size())
     }
 
-    pub fn screen_size(&self) -> Size {
+    pub fn size(&self) -> Size {
         let cell = self.cell_size_in_pixels();
         Size::new(
             self.width as u16 / cell.width,
@@ -86,7 +81,7 @@ impl XashBackend {
     }
 
     pub fn area(&self) -> Rect {
-        Rect::from((Position::ORIGIN, self.screen_size()))
+        Rect::from((Position::ORIGIN, self.size()))
     }
 
     pub fn cursor_position_in_pixels(&self) -> Position {
@@ -179,7 +174,6 @@ impl XashBackend {
         let size = size.clamp(8, 128) as isize;
         if size != self.font_map.font().size() {
             self.font_map = FontMap::new(Font::new(size));
-            self.clear().unwrap();
         }
     }
 
@@ -191,22 +185,24 @@ impl XashBackend {
     }
 
     pub fn draw_background(&mut self) {
+        let engine = engine();
+
         // fill screen with default color
         let s = (self.width, self.height);
-        self.eng.fill_rgba((0, 0), s, color_bg(Color::Reset));
+        engine.fill_rgba((0, 0), s, color_bg(Color::Reset));
 
         // draw xash logo at the right bottom corner
         let bg_size = self.bg.size();
         let cell = self.cell_size_in_pixels();
-        let screen = self.screen_size();
+        let screen = self.size();
         let x = (screen.width.saturating_sub(1) * cell.width) as c_int - bg_size.width;
         let y = (screen.height.saturating_sub(1) * cell.height) as c_int - bg_size.height;
         self.bg.set();
-        self.eng.pic_draw_trans((x, y), bg_size, None);
+        engine.pic_draw_trans((x, y), bg_size, None);
     }
 
     pub(crate) fn draw_buffer(&mut self, buffer: &Buffer) {
-        let width = self.screen_size().width;
+        let width = self.size().width;
         let mut x = 0;
         let mut y = 0;
         let iter = buffer.content().iter().filter_map(|cell| {
@@ -219,21 +215,12 @@ impl XashBackend {
             }
             result
         });
-        self.draw(iter).ok();
+        self.draw(iter);
     }
-}
 
-impl Default for XashBackend {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Backend for XashBackend {
-    fn draw<'a, I>(&mut self, content: I) -> Result<()>
-    where
-        I: Iterator<Item = (u16, u16, &'a Cell)>,
-    {
+    fn draw<'a>(&mut self, content: impl Iterator<Item = (u16, u16, &'a Cell)>) {
+        let engine = engine();
+        let ascent = self.font_map.font().ascent();
         let cell_size = self.cell_size_in_pixels();
         let align = self.alignment_offset();
         for (x, y, cell) in content {
@@ -242,19 +229,20 @@ impl Backend for XashBackend {
             if cell.bg != Color::Reset {
                 let p = (x as c_int, y as c_int);
                 let s = (cell_size.width as c_int, cell_size.height as c_int);
-                self.eng.fill_rgba(p, s, color_bg(cell.bg));
+                engine.fill_rgba(p, s, color_bg(cell.bg));
             }
-            let y = y + self.font_map.font().ascent();
+            let y = y + ascent;
             if cell.modifier.contains(Modifier::UNDERLINED) {
                 let p = (x as c_int, (y + 1) as c_int);
                 let s = (cell_size.width as c_int, 2);
-                self.eng.fill_rgba(p, s, color_fg(cell.fg));
+                engine.fill_rgba(p, s, color_fg(cell.fg));
             }
             if !cell.symbol().trim().is_empty() {
                 self.cells.push((x, y, color_fg(cell.fg).into(), cell));
             }
         }
 
+        // sorting by color results in less state changes and better performance
         self.cells.sort_unstable_by_key(|&(_, _, fg, _)| fg);
 
         for (x, y, fg, cell) in self.cells.drain(..) {
@@ -272,53 +260,9 @@ impl Backend for XashBackend {
                     top: info.y as c_int,
                     bottom: (info.y + info.h) as c_int,
                 };
-                self.eng.pic_draw_trans((gx, gy), (gw, gh), Some(&rect));
+                engine.pic_draw_trans((gx, gy), (gw, gh), Some(&rect));
             }
         }
-
-        Ok(())
-    }
-
-    fn hide_cursor(&mut self) -> Result<()> {
-        Ok(())
-    }
-
-    fn show_cursor(&mut self) -> Result<()> {
-        Ok(())
-    }
-
-    fn get_cursor_position(&mut self) -> Result<Position> {
-        Ok(self.cursor)
-    }
-
-    fn set_cursor_position<P: Into<Position>>(&mut self, position: P) -> Result<()> {
-        self.cursor = position.into();
-        Ok(())
-    }
-
-    fn clear(&mut self) -> Result<()> {
-        // we always do full redraw.
-        Ok(())
-    }
-
-    fn size(&self) -> Result<Size> {
-        Ok(self.screen_size())
-    }
-
-    fn window_size(&mut self) -> Result<WindowSize> {
-        Ok(WindowSize {
-            columns_rows: self.screen_size(),
-            pixels: Size::new(self.width as u16, self.height as u16),
-        })
-    }
-
-    fn flush(&mut self) -> Result<()> {
-        Ok(())
-    }
-
-    fn clear_region(&mut self, _: ClearType) -> Result<()> {
-        // we always do full redraw.
-        Ok(())
     }
 }
 

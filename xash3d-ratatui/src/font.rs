@@ -126,6 +126,7 @@ impl GlyphMap {
 
         let path = format!("#mainui/backend/map{start:04x}.bmp");
 
+        #[cfg(feature = "std")]
         if false {
             let path = format!("/tmp/map{start:04x}.bmp");
             std::fs::write(path, bmp.as_slice()).unwrap();

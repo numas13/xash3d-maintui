@@ -85,6 +85,10 @@ impl XashBackend {
         )
     }
 
+    pub fn area(&self) -> Rect {
+        Rect::from((Position::ORIGIN, self.screen_size()))
+    }
+
     pub fn cursor_position_in_pixels(&self) -> Position {
         self.mouse_pos
     }
@@ -179,7 +183,7 @@ impl XashBackend {
         }
     }
 
-    pub fn resize(&mut self, width: usize, height: usize) {
+    pub fn resize(&mut self, width: u16, height: u16) {
         self.width = width as c_int;
         self.height = height as c_int;
         self.calc_alignment();
@@ -199,6 +203,23 @@ impl XashBackend {
         let y = (screen.height.saturating_sub(1) * cell.height) as c_int - bg_size.height;
         self.bg.set();
         self.eng.pic_draw_trans((x, y), bg_size, None);
+    }
+
+    pub(crate) fn draw_buffer(&mut self, buffer: &Buffer) {
+        let width = self.screen_size().width;
+        let mut x = 0;
+        let mut y = 0;
+        let iter = buffer.content().iter().filter_map(|cell| {
+            // XXX: numas13: do we need multi-width characters?
+            let result = (!cell.skip && *cell != Cell::EMPTY).then_some((x, y, cell));
+            x += 1;
+            if x >= width {
+                x = 0;
+                y += 1;
+            }
+            result
+        });
+        self.draw(iter).ok();
     }
 }
 

@@ -10,7 +10,7 @@ use core::ffi::c_int;
 use alloc::{boxed::Box, vec::Vec};
 use csz::CStrThin;
 use ratatui::prelude::*;
-use xash3d_ratatui::XashBackend;
+use xash3d_ratatui::{XashBackend, XashTerminal};
 use xash3d_ui::{color::RGBA, engine, export::UnsyncGlobal, globals, raw::netadr_s, ActiveMenu};
 
 use crate::{
@@ -86,7 +86,7 @@ enum Focus {
 }
 
 pub struct Ui {
-    terminal: Terminal<XashBackend>,
+    terminal: XashTerminal,
     history: Vec<Box<dyn Menu>>,
     active: bool,
     grab_input: bool,
@@ -102,9 +102,6 @@ impl Default for Ui {
     fn default() -> Self {
         strings::init();
 
-        let backend = XashBackend::new();
-        let terminal = Terminal::new(backend).expect("failed to create terminal");
-
         // TODO: helper macro
         unsafe extern "C" fn cmd_fg() {
             unsafe { Instance::global_assume_init_ref() }
@@ -115,7 +112,7 @@ impl Default for Ui {
 
         Self {
             history: vec![],
-            terminal,
+            terminal: XashTerminal::default(),
             active: false,
             grab_input: false,
             modifier: Modifier::default(),
@@ -131,9 +128,8 @@ impl Default for Ui {
 impl Ui {
     pub fn vid_init(&mut self) -> bool {
         let globals = globals();
-        let backend = self.terminal.backend_mut();
-        backend.resize(globals.scrWidth as usize, globals.scrHeight as usize);
-        self.terminal.clear().unwrap();
+        self.terminal
+            .resize(globals.scrWidth as u16, globals.scrHeight as u16);
         true
     }
 
@@ -322,28 +318,19 @@ impl Ui {
             ));
         }
 
-        let backend = self.terminal.backend_mut();
-        backend.draw_background();
+        self.terminal.backend_mut().draw_background();
+        if let Some(menu) = self.history.last_mut() {
+            self.terminal.draw(|area, buffer, backend| {
+                let screen = Screen::new(backend);
 
-        let Some(menu) = self.history.last_mut() else {
-            return;
-        };
-        let screen = Screen::new(backend);
-        self.terminal
-            .draw(|frame| {
-                menu.draw(frame.area(), frame.buffer_mut(), &screen);
+                menu.draw(area, buffer, &screen);
+
                 if self.focus == Focus::QuitPopup {
-                    self.quit_popup.as_mut().unwrap().render(
-                        frame.area(),
-                        frame.buffer_mut(),
-                        &screen,
-                    );
+                    let popup = self.quit_popup.as_mut().unwrap();
+                    popup.render(area, buffer, &screen);
                 }
-            })
-            .unwrap();
-
-        // TODO: remove when cell cache will be implemented
-        self.terminal.clear().unwrap();
+            });
+        }
     }
 
     pub fn key_event(&mut self, key: c_int, down: bool) {

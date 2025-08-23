@@ -15,5 +15,7 @@ extern crate log;
 mod backend;
 mod bmp;
 mod font;
+mod terminal;
 
 pub use backend::XashBackend;
+pub use terminal::XashTerminal;

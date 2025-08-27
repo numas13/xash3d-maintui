@@ -85,7 +85,7 @@ impl TouchButtonsConfig {
     fn remove_button(&mut self, i: usize) {
         self.state.set(Focus::List);
         let name = &self.list[i];
-        engine().client_cmdf(format_args!("touch_removebutton \"{name}\""));
+        engine().client_cmd(format_args!("touch_removebutton \"{name}\""));
         sound::confirm();
         self.load_list();
     }

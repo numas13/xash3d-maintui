@@ -173,7 +173,7 @@ impl CreateServer {
 
         let listenservercfg = engine.get_cvar_string(c"lservercfgfile");
         engine.write_server_config(listenservercfg);
-        engine.client_cmdf_now(format_args!("exec {listenservercfg}\n"));
+        engine.client_cmd_now(format_args!("exec {listenservercfg}\n"));
 
         // dirty listenserver config form old xash may rewrite maxplayers
         engine.set_cvar_float(CVAR_MAXPLAYERS, parms.max_players as f32);

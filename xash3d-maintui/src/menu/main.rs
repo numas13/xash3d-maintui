@@ -256,7 +256,7 @@ impl MainMenu {
         eng.stop_background_track();
         if start_demo {
             let info = eng.get_game_info_2().unwrap();
-            eng.client_cmdf(format_args!("newgame {}", &info.demomap));
+            eng.client_cmd(format_args!("newgame {}", &info.demomap));
         } else {
             eng.client_cmd(cmd);
         }

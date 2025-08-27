@@ -138,7 +138,7 @@ impl Controls {
             if name == "\\\\" {
                 name = "\\";
             }
-            engine.client_cmdf_now(format_args!("bind \"{bind}\" \"{name}\""));
+            engine.client_cmd_now(format_args!("bind \"{bind}\" \"{name}\""));
         });
         self.load_keys();
     }
@@ -168,7 +168,7 @@ impl Controls {
         }
         let engine = engine();
         let s = engine.keynum_to_str(raw as c_int);
-        engine.client_cmdf_now(format_args!("bind \"{s}\" \"{bind}\""));
+        engine.client_cmd_now(format_args!("bind \"{s}\" \"{bind}\""));
         // XXX: The engine uses a static buffer for keynum_to_str. Need to drop before
         // call to load_keys or panic will be thrown.
         drop(s);

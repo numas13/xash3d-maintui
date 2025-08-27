@@ -101,7 +101,7 @@ impl ServerEntry {
         let engine = engine();
         let address = engine.addr_to_string_ref(&self.addr);
         let protocol = self.protocol;
-        engine.client_cmdf(format_args!("ui_queryserver \"{address}\" \"{protocol}\""));
+        engine.client_cmd(format_args!("ui_queryserver \"{address}\" \"{protocol}\""));
     }
 
     fn set_info(&mut self, info: ServerInfo) {

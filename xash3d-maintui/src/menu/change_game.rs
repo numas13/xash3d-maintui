@@ -190,7 +190,7 @@ impl Menu for ChangeGame {
             }
             Focus::ConfirmPopup(i) => match self.change_popup.key_event(backend, event) {
                 ConfirmResult::Ok => {
-                    engine().client_cmdf(format_args!("game {}\n", self.table[*i].gamedir));
+                    engine().client_cmd(format_args!("game {}\n", self.table[*i].gamedir));
                 }
                 ConfirmResult::Cancel => self.state.cancel(Focus::Table),
                 _ => {}

@@ -7,8 +7,6 @@ use xash3d_ui::{color::RGBA, engine, raw::wrect_s};
 pub struct Screen {
     /// Cell size in pixels.
     pub cell: Size,
-    /// Alignment offset in pixels.
-    pub align: Position,
     pub cursor: Position,
 }
 
@@ -16,15 +14,14 @@ impl Screen {
     pub fn new(backend: &XashBackend) -> Self {
         Screen {
             cell: backend.cell_size_in_pixels(),
-            align: backend.alignment_offset(),
             cursor: backend.cursor_position(),
         }
     }
 
     pub fn draw_picture(&self, area: Rect, pic: c_int, colors: &[RGBA]) {
         let engine = engine();
-        let mut x = (self.align.x + self.cell.width * area.x) as c_int;
-        let mut y = (self.align.y + self.cell.height * area.y) as c_int;
+        let mut x = (area.x * self.cell.width) as c_int;
+        let mut y = (area.y * self.cell.height) as c_int;
         let mut w = (area.width * self.cell.width) as c_int;
         let mut h = (area.height * self.cell.height) as c_int;
         engine.fill_rgba((x, y), (w, h), RGBA::BLACK);

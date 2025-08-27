@@ -8,10 +8,7 @@ use ratatui::{
 };
 use xash3d_ui::{color::RGBA, engine, globals, picture::Picture, raw::wrect_s};
 
-use crate::{
-    bmp::Bmp,
-    font::{Font, FontMap},
-};
+use crate::font::{Font, FontMap};
 
 const DEFAULT_FONT_SIZE: u16 = 21;
 
@@ -28,42 +25,41 @@ fn scale_font_size(size: u16, width: c_int, _height: c_int) -> u16 {
     (size as f32 * scale) as u16
 }
 
+struct DrawCell {
+    index: u16,
+    x: i16,
+    y: i16,
+    fg: RGBA,
+}
+
 pub struct XashBackend {
+    /// screen width in pixels
     width: c_int,
+    /// screen height in pixels
     height: c_int,
-    align: Position,
     mouse_pos: Position,
     cursor: Position,
     font_map: FontMap,
     // temporary buffer for sorted list of cells optimized for rendering
-    cells: Vec<(u16, u16, RGBA, *const Cell)>,
+    cells: Vec<DrawCell>,
     bg: Picture,
 }
 
 impl Default for XashBackend {
     fn default() -> Self {
-        let mut pixel = Bmp::builder(1, 1).build();
-        pixel.set_pixel(0, 0, 255, 255, 255, 255);
-
         let globals = globals();
         let width = globals.scrWidth;
         let height = globals.scrHeight;
         let font_size = scale_font_size(DEFAULT_FONT_SIZE, width, height);
-
-        let bg = Picture::create(c"#mainui/backend/xash_logo.png", XASH_LOGO);
-
-        let mut ret = Self {
+        Self {
             width,
             height,
-            align: Position::ORIGIN,
             mouse_pos: Position::ORIGIN,
             cursor: Position::ORIGIN,
             font_map: FontMap::new(Font::new(font_size as isize)),
             cells: Vec::new(),
-            bg,
-        };
-        ret.calc_alignment();
-        ret
+            bg: Picture::create(c"#mainui/backend/xash_logo.png", XASH_LOGO),
+        }
     }
 }
 
@@ -92,25 +88,14 @@ impl XashBackend {
         self.cursor
     }
 
-    fn calc_alignment(&mut self) {
-        // let (w, h) = self.get_cell_size();
-        // self.align.x = self.width as u16 % w / 2;
-        // self.align.y = self.height as u16 % h / 2;
-    }
-
-    pub fn alignment_offset(&self) -> Position {
-        self.align
-    }
-
     pub fn mouse_to_cursor(&self, mouse: Position) -> Position {
         let cell = self.cell_size_in_pixels();
-        let align = self.alignment_offset();
         let mut cursor = Position::ORIGIN;
-        if (align.x..self.width as u16 - align.x).contains(&mouse.x) {
-            cursor.x = (mouse.x - align.x) / cell.width;
+        if (0..self.width as u16).contains(&mouse.x) {
+            cursor.x = mouse.x / cell.width;
         }
-        if (align.y..self.height as u16 - align.y).contains(&mouse.y) {
-            cursor.y = (mouse.y - align.y) / cell.height;
+        if (0..self.height as u16).contains(&mouse.y) {
+            cursor.y = mouse.y / cell.height;
         }
         cursor
     }
@@ -126,10 +111,9 @@ impl XashBackend {
 
     pub fn area_to_pixels(&self, area: Rect) -> Rect {
         let cell = self.cell_size_in_pixels();
-        let align = self.alignment_offset();
         Rect::new(
-            cell.width * area.x + align.x,
-            cell.height * area.y + align.y,
+            cell.width * area.x,
+            cell.height * area.y,
             cell.width * area.width,
             cell.height * area.height,
         )
@@ -180,7 +164,6 @@ impl XashBackend {
     pub fn resize(&mut self, width: u16, height: u16) {
         self.width = width as c_int;
         self.height = height as c_int;
-        self.calc_alignment();
         self.set_font_size(scale_font_size(DEFAULT_FONT_SIZE, self.width, self.height));
     }
 
@@ -202,56 +185,54 @@ impl XashBackend {
     }
 
     pub(crate) fn draw_buffer(&mut self, buffer: &Buffer) {
-        let width = self.size().width;
+        let cell_size = self.cell_size_in_pixels();
+        let cell_width = cell_size.width as c_int;
+        let cell_height = cell_size.height as c_int;
+        let width = self.width;
         let mut x = 0;
         let mut y = 0;
-        let iter = buffer.content().iter().filter_map(|cell| {
+        let iter = buffer.content().iter().enumerate().filter_map(|(i, cell)| {
             // XXX: numas13: do we need multi-width characters?
-            let result = (!cell.skip && *cell != Cell::EMPTY).then_some((x, y, cell));
-            x += 1;
-            if x >= width {
+            let result = (!cell.skip && *cell != Cell::EMPTY).then_some((i as u16, x, y, cell));
+            x += cell_width;
+            if x + cell_width >= width {
                 x = 0;
-                y += 1;
+                y += cell_height;
             }
             result
         });
-        self.draw(iter);
-    }
 
-    fn draw<'a>(&mut self, content: impl Iterator<Item = (u16, u16, &'a Cell)>) {
+        // draw background and collect non-empty cells
         let engine = engine();
-        let ascent = self.font_map.font().ascent();
-        let cell_size = self.cell_size_in_pixels();
-        let align = self.alignment_offset();
-        for (x, y, cell) in content {
-            let x = align.x + x * cell_size.width;
-            let y = align.y + y * cell_size.height;
+        let ascent = self.font_map.font().ascent() as c_int;
+        for (i, x, y, cell) in iter {
             if cell.bg != Color::Reset {
-                let p = (x as c_int, y as c_int);
-                let s = (cell_size.width as c_int, cell_size.height as c_int);
-                engine.fill_rgba(p, s, color_bg(cell.bg));
+                engine.fill_rgba((x, y), (cell_width, cell_height), color_bg(cell.bg));
             }
             let y = y + ascent;
+            let fg = color_fg(cell.fg);
             if cell.modifier.contains(Modifier::UNDERLINED) {
-                let p = (x as c_int, (y + 1) as c_int);
-                let s = (cell_size.width as c_int, 2);
-                engine.fill_rgba(p, s, color_fg(cell.fg));
+                engine.fill_rgba((x, y + 1), (cell_width, 2), fg);
             }
-            if !cell.symbol().trim().is_empty() {
-                self.cells.push((x, y, color_fg(cell.fg).into(), cell));
+            if !cell.symbol().trim_start().is_empty() {
+                let x = x as i16;
+                let y = y as i16;
+                self.cells.push(DrawCell { index: i, x, y, fg });
             }
         }
 
-        // sorting by color results in less state changes and better performance
-        self.cells.sort_unstable_by_key(|&(_, _, fg, _)| fg);
+        // sorting by color results in a less state changes for better performance
+        self.cells.sort_unstable_by_key(|i| i.fg);
 
-        for (x, y, fg, cell) in self.cells.drain(..) {
-            let cell = unsafe { &*cell };
+        // draw non-empty cells
+        for draw in self.cells.drain(..) {
+            // SAFETY: index is from enumerate over buffer.content()
+            let cell = unsafe { buffer.content().get_unchecked(draw.index as usize) };
             for c in cell.symbol().chars() {
                 let (pic, info) = self.font_map.get(c, cell.modifier);
-                pic.set_with_color(fg);
-                let gx = x as c_int + info.bearing_x as c_int;
-                let gy = y as c_int + info.bearing_y as c_int;
+                pic.set_with_color(draw.fg);
+                let gx = draw.x as c_int + info.bearing_x as c_int;
+                let gy = draw.y as c_int + info.bearing_y as c_int;
                 let gw = info.w as c_int;
                 let gh = info.h as c_int;
                 let rect = wrect_s {
@@ -266,7 +247,7 @@ impl XashBackend {
     }
 }
 
-fn convert_color(color: Color, is_fg: bool) -> [u8; 3] {
+fn convert_color(color: Color, is_fg: bool) -> RGBA {
     let color = match color {
         Color::Reset if is_fg => 0xf6f6ef,
         Color::Reset => 0x1a1a1a,
@@ -286,17 +267,17 @@ fn convert_color(color: Color, is_fg: bool) -> [u8; 3] {
         Color::LightMagenta => 0xf4307f,
         Color::LightCyan => 0x58d1eb,
         Color::White => 0xf6f6ef,
-        Color::Rgb(r, g, b) => u32::from_le_bytes([0, r, g, b]),
+        Color::Rgb(r, g, b) => u32::from_be_bytes([0, r, g, b]),
         Color::Indexed(_) => todo!(),
-    }
-    .to_le_bytes();
-    [color[2], color[1], color[0]]
+    };
+    let [_, r, g, b] = color.to_be_bytes();
+    RGBA::rgb(r, g, b)
 }
 
-fn color_bg(color: Color) -> [u8; 3] {
+fn color_bg(color: Color) -> RGBA {
     convert_color(color, false)
 }
 
-fn color_fg(color: Color) -> [u8; 3] {
+fn color_fg(color: Color) -> RGBA {
     convert_color(color, true)
 }

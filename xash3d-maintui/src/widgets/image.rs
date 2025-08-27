@@ -24,7 +24,10 @@ impl<'a> Image<'a> {
 }
 
 impl WidgetMut<ConfirmResult> for Image<'_> {
-    fn render(&mut self, area: Rect, _buf: &mut Buffer, screen: &Screen) {
+    fn render(&mut self, area: Rect, buf: &mut Buffer, screen: &Screen) {
+        for pos in area.positions() {
+            buf[pos].reset();
+        }
         if self.picture == 0 {
             return;
         }

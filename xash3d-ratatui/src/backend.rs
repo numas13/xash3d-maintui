@@ -195,7 +195,7 @@ impl XashBackend {
             // XXX: numas13: do we need multi-width characters?
             let result = (!cell.skip && *cell != Cell::EMPTY).then_some((i as u16, x, y, cell));
             x += cell_width;
-            if x + cell_width >= width {
+            if x + cell_width > width {
                 x = 0;
                 y += cell_height;
             }

@@ -298,17 +298,28 @@ impl Browser {
     fn switch_tab(&mut self, to: Tab) {
         if self.tab != to {
             self.tab = to;
-            self.table.state.select(None);
+            self.focus_tabs();
             self.query_servers();
         }
     }
 
-    fn focus_menu(&mut self) {
+    fn menu_selected_save(&mut self) {
+        if self.menu.state.selected().is_some() {
+            self.menu_last = self.menu.state.selected();
+            self.menu.state.select(None);
+        }
+    }
+
+    fn menu_selected_restore(&mut self) {
         if self.menu_last.is_none() {
             self.menu.state.select_first();
         } else {
             self.menu.state.select(self.menu_last.take());
         }
+    }
+
+    fn focus_menu(&mut self) {
+        self.menu_selected_restore();
         self.state.next(Focus::Menu);
     }
 
@@ -318,10 +329,7 @@ impl Browser {
     }
 
     fn focus_table(&mut self) {
-        if self.menu.state.selected().is_some() {
-            self.menu_last = self.menu.state.selected();
-            self.menu.state.select(None);
-        }
+        self.menu_selected_save();
         if self.table.state.selected().is_none() {
             self.table.state.select_first();
         }
@@ -574,9 +582,10 @@ impl Browser {
             Key::Tab => {
                 self.tabs_key_event(backend, event);
             }
-            Key::ArrowRight | Key::Char(b'l') => {
-                self.focus_table();
+            Key::Char(b'h') | Key::ArrowLeft => {
+                // just ignore default behaviour, do not go back
             }
+            Key::ArrowRight | Key::Char(b'l') => self.focus_table(),
             _ => match self.menu.key_event(backend, event) {
                 SelectResult::Ok(i) => return self.menu_exec(i),
                 SelectResult::Cancel => return Control::Back,
@@ -627,10 +636,11 @@ impl Browser {
     fn table_key_event(&mut self, backend: &XashBackend, event: KeyEvent) -> Control {
         let key = event.key();
         match key {
-            Key::Char(b'h') | Key::ArrowLeft if self.tab == Tab::Direct => self.focus_menu(),
-            Key::Tab | Key::Char(b'h' | b'l') | Key::ArrowLeft | Key::ArrowRight => {
-                self.tabs_key_event(backend, event);
+            Key::Char(b'h') | Key::ArrowLeft => self.focus_menu(),
+            Key::Char(b'l') | Key::ArrowRight => {
+                // just ignore default behaviour, do not connect
             }
+            Key::Tab => return self.tabs_key_event(backend, event),
             Key::Char(b'f') => self.toggle_favorite(),
             Key::Char(b'q') | Key::Escape => return Control::Back,
             _ => match self.table.key_event(backend, event) {

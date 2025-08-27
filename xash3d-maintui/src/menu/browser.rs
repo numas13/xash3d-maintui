@@ -48,6 +48,7 @@ const SORT_PING: &str = i18n::SORT_PING;
 const SORT_NUMCL: &str = i18n::SORT_NUMCL;
 const SORT_HOST: &str = i18n::SORT_HOST;
 const SORT_MAP: &str = i18n::SORT_MAP;
+const SORT_LIST: &[&str] = &[SORT_CANCEL, SORT_PING, SORT_NUMCL, SORT_HOST, SORT_MAP];
 
 const PROTOCOL_CANCEL: &str = i18n::CANCEL;
 const PROTOCOL_XASH3D_49: &str = i18n::PROTOCOL_XASH3D_49;
@@ -251,10 +252,7 @@ impl Browser {
             menu_last: None,
             sort_by: SortBy::default(),
             sort_reverse: false,
-            sort_popup: ListPopup::new(
-                i18n::SORT_TITLE,
-                [SORT_CANCEL, SORT_PING, SORT_NUMCL, SORT_HOST, SORT_MAP],
-            ),
+            sort_popup: ListPopup::new(i18n::SORT_TITLE, SORT_LIST),
             password_popup: InputPopup::new_password(i18n::PASSWORD_LABEL),
             tab: Tab::default(),
             table: MyTable::new_first(),
@@ -437,6 +435,15 @@ impl Browser {
     }
 
     fn show_sort_popup(&mut self, focus_table: bool) {
+        let current = match self.sort_by {
+            SortBy::Ping => SORT_PING,
+            SortBy::Numcl => SORT_NUMCL,
+            SortBy::Host => SORT_HOST,
+            SortBy::Map => SORT_MAP,
+        };
+        self.sort_popup
+            .state
+            .select(SORT_LIST.iter().position(|&i| i == current));
         self.state.select(Focus::SortPopup(focus_table));
     }
 

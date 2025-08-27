@@ -785,7 +785,7 @@ impl Menu for Browser {
                     true
                 } else if self.table.mouse_event(backend) {
                     // TODO: highlight table header
-                    self.menu.state.select(None);
+                    self.menu_selected_save();
                     self.state.set(Focus::Table);
                     true
                 } else if self
@@ -793,7 +793,7 @@ impl Menu for Browser {
                     .iter()
                     .any(|i| i.1.contains(backend.cursor_position()))
                 {
-                    self.menu.state.select(None);
+                    self.menu_selected_save();
                     self.table.state.select(None);
                     self.state.set(Focus::Tabs);
                     true

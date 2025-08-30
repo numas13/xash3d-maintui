@@ -255,7 +255,7 @@ impl Logo {
         let Some(path) = self.get_path(self.get_logo_index()) else {
             return;
         };
-        let pic = Picture::<CString>::load(path.into(), PictureFlags::empty());
+        let pic = Picture::<CString>::load(path.into(), PictureFlags::empty()).unwrap();
         let color = self.get_color(self.get_color_index());
         *self.preview.borrow_mut() = Some(LogoPreview::new(pic, color));
     }
@@ -325,7 +325,7 @@ impl Model {
         write!(path.cursor(), "models/player/{name}/{name}.bmp").unwrap();
         let engine = engine();
         let pic = engine.pic_load(path.as_c_str(), None, PictureFlags::KEEP_SOURCE.bits());
-        let preview = if pic != 0 {
+        let preview = if let Some(pic) = pic {
             let top_color = engine.get_cvar_float(c"topcolor");
             let bottom_color = engine.get_cvar_float(c"bottomcolor");
             engine.process_image(pic, -1.0, top_color as c_int, bottom_color as c_int);

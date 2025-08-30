@@ -2,7 +2,6 @@ use core::{ffi::CStr, str};
 
 use alloc::ffi::CString;
 use compact_str::CompactString;
-use libc::c_int;
 use ratatui::{
     prelude::*,
     style::{Style, Stylize},
@@ -12,6 +11,7 @@ use xash3d_ratatui::XashBackend;
 use xash3d_ui::{
     consts::{CS_SIZE, CS_TIME},
     engine,
+    raw::HIMAGE,
 };
 
 use crate::{
@@ -50,7 +50,7 @@ struct SaveInfo {
 
 struct SavePreview {
     filename: CompactString,
-    picture: c_int,
+    picture: Option<HIMAGE>,
 }
 
 impl SavePreview {
@@ -263,8 +263,8 @@ impl SavesMenu {
             self.preview = Some(SavePreview::new(save.filename.clone()));
         }
         if let Some(preview) = &self.preview {
-            if preview.picture != 0 {
-                Image::new(preview.picture).render(inner_area, buf, screen);
+            if let Some(pic) = preview.picture {
+                Image::new(pic).render(inner_area, buf, screen);
             }
         }
     }

@@ -1,8 +1,6 @@
 use core::ffi::CStr;
 
-use xash3d_ui::engine::CVar;
-
-use crate::ui::utils;
+use xash3d_ui::{engine, CVar};
 
 pub trait ConfigBackend<V> {
     fn is_enabled(&self) -> bool {
@@ -24,13 +22,13 @@ impl CVarBackend {
     }
 }
 
-impl<V: CVar> ConfigBackend<V> for CVarBackend {
+impl<'a, V: CVar<'a>> ConfigBackend<V> for CVarBackend {
     fn read(&self) -> Option<V> {
-        Some(utils::cvar_read(self.name))
+        Some(engine().cvar(self.name))
     }
 
     fn write(&mut self, value: V) {
-        utils::cvar_write(self.name, value);
+        engine().cvar_set(self.name, value);
     }
 }
 
@@ -46,20 +44,20 @@ impl CVarInvert {
 
 impl ConfigBackend<bool> for CVarInvert {
     fn read(&self) -> Option<bool> {
-        Some(!utils::cvar_read::<bool>(self.name))
+        Some(!engine().cvar::<bool>(self.name))
     }
 
     fn write(&mut self, value: bool) {
-        utils::cvar_write(self.name, !value);
+        engine().cvar_set(self.name, !value);
     }
 }
 
 impl ConfigBackend<f32> for CVarInvert {
     fn read(&self) -> Option<f32> {
-        Some(-utils::cvar_read::<f32>(self.name))
+        Some(-engine().cvar::<f32>(self.name))
     }
 
     fn write(&mut self, value: f32) {
-        utils::cvar_write(self.name, -value);
+        engine().cvar_set(self.name, -value);
     }
 }

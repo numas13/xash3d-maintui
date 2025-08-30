@@ -13,7 +13,7 @@ use crate::{
     config_list::{CVarInvert, ConfigBackend, ConfigEntry, ConfigList},
     input::KeyEvent,
     strings::Localize,
-    ui::{utils, Control, Menu, Screen},
+    ui::{Control, Menu, Screen},
 };
 
 mod i18n {
@@ -84,7 +84,7 @@ impl VideoMode {
 
 impl ConfigBackend<usize> for VideoMode {
     fn read(&self) -> Option<usize> {
-        Some(utils::cvar_read(Self::CVAR_NAME))
+        Some(engine().cvar(Self::CVAR_NAME))
     }
 
     fn write(&mut self, mode: usize) {

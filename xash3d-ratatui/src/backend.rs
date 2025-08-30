@@ -58,7 +58,7 @@ impl Default for XashBackend {
             cursor: Position::ORIGIN,
             font_map: FontMap::new(Font::new(font_size as isize)),
             cells: Vec::new(),
-            bg: Picture::create(c"#mainui/backend/xash_logo.png", XASH_LOGO),
+            bg: Picture::create(c"#mainui/backend/xash_logo.png", XASH_LOGO).unwrap(),
         }
     }
 }

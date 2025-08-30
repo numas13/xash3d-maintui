@@ -1,4 +1,4 @@
-use core::{cmp, ffi::CStr};
+use core::cmp;
 
 use alloc::string::String;
 use ratatui::{
@@ -6,7 +6,7 @@ use ratatui::{
     widgets::{Block, Borders, ListState, Paragraph, TableState, Wrap},
 };
 use unicode_width::UnicodeWidthStr;
-use xash3d_ui::{engine, engine::CVar};
+use xash3d_ui::engine;
 
 use crate::strings;
 
@@ -173,14 +173,6 @@ pub fn render_hint(area: Rect, buf: &mut Buffer, items: usize, hint: Option<&str
         }
     }
     area
-}
-
-pub fn cvar_read<T: CVar>(name: &CStr) -> T {
-    engine().cvar(name)
-}
-
-pub fn cvar_write<T: CVar>(name: &CStr, value: T) {
-    engine().cvar_set(name, value);
 }
 
 pub fn is_dev() -> bool {

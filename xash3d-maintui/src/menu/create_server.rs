@@ -151,7 +151,7 @@ impl CreateServer {
         let mut buf = CStrArray::<256>::new();
 
         let map_index = if parms.map_index == 0 {
-            engine.rand_int(1, self.maps.len() as _) as usize
+            engine.random_int(1, self.maps.len() as _) as usize
         } else {
             parms.map_index
         };

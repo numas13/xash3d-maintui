@@ -127,6 +127,6 @@ impl Bmp {
     pub fn create_picture<S: AsRef<CStr>>(&self, path: S) -> Picture<S> {
         // TODO: return Result
         assert!(path.as_ref().to_bytes().ends_with(b".bmp"));
-        Picture::create(path, self.as_slice())
+        Picture::create(path, self.as_slice()).unwrap()
     }
 }

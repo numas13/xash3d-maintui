@@ -5,7 +5,7 @@ use core::{
     str,
 };
 
-use alloc::{rc::Rc, vec::Vec};
+use alloc::{rc::Rc, string::String, vec::Vec};
 use compact_str::{CompactString, ToCompactString};
 use csz::CStrArray;
 use ratatui::prelude::*;
@@ -70,11 +70,9 @@ fn get_map_list() -> Option<Vec<Map>> {
         error!("failed to load maps.lst");
         return None;
     };
-    let Ok(content) = str::from_utf8(file.as_slice()) else {
-        error!("maps.lst is not a valid UTF-8 file");
-        return None;
-    };
-    match parse_map_list(content) {
+    // XXX: lossy because maps.lst can be encoded in any combination of encodings.
+    let content = String::from_utf8_lossy(file.as_slice());
+    match parse_map_list(&content) {
         Ok(list) => Some(list),
         Err(e) => {
             error!("failed to parse maps.lst: {e:?}");

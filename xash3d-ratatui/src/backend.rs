@@ -6,7 +6,7 @@ use ratatui::{
     layout::{Position, Size},
     prelude::*,
 };
-use xash3d_ui::{color::RGBA, engine, globals, picture::Picture, raw::wrect_s};
+use xash3d_ui::{color::RGBA, picture::Picture, prelude::*, raw::wrect_s};
 
 use crate::font::{Font, FontMap};
 
@@ -48,8 +48,8 @@ pub struct XashBackend {
 impl Default for XashBackend {
     fn default() -> Self {
         let globals = globals();
-        let width = globals.scrWidth;
-        let height = globals.scrHeight;
+        let width = globals.screen_width();
+        let height = globals.screen_height();
         let font_size = scale_font_size(DEFAULT_FONT_SIZE, width, height);
         Self {
             width,

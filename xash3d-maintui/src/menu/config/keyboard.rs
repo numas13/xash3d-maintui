@@ -10,8 +10,8 @@ use ratatui::{
 };
 use xash3d_ratatui::XashBackend;
 use xash3d_ui::{
-    engine,
-    parser::{Error as ParserError, Tokens},
+    parser::{TokenError, Tokens},
+    prelude::*,
 };
 
 use crate::{
@@ -102,7 +102,7 @@ impl Controls {
             return;
         };
 
-        let mut parse = |data| -> Result<(), ParserError> {
+        let mut parse = |data| -> Result<(), TokenError> {
             let mut tokens = Tokens::new(data);
             while let Some(token) = tokens.next() {
                 f(token?, tokens.parse()?);

@@ -4,7 +4,7 @@ use ratatui::{
     widgets::{Block, Borders, Row, Table},
 };
 use xash3d_ratatui::XashBackend;
-use xash3d_ui::{engine, raw::gameinfo2_s};
+use xash3d_ui::{prelude::*, raw::gameinfo2_s};
 
 use crate::{
     input::KeyEvent,

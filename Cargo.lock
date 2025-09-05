@@ -87,7 +87,7 @@ dependencies = [
 [[package]]
 name = "csz"
 version = "0.2.0"
-source = "git+https://github.com/numas13/csz.git#bbb074d253961660841bcf007cc0dc5bc6bddcfb"
+source = "git+https://github.com/numas13/csz.git#b3b1518e873f48f6c637a718c4b73be952ac1352"
 
 [[package]]
 name = "darling"
@@ -389,12 +389,12 @@ checksum = "1fc81956842c57dac11422a97c3b8195a1ff727f06e85c84ed2e8aa277c9a0fd"
 [[package]]
 name = "xash3d-cell"
 version = "0.1.0"
-source = "git+https://github.com/numas13/xash3d-sdk.git#5c00868a1ceca1ccfc16cd1d1701547959d71207"
+source = "git+https://github.com/numas13/xash3d-sdk.git#59a6fcd93f28d4f3ac63c2597541e1ccb7410c12"
 
 [[package]]
 name = "xash3d-hl-resources"
 version = "0.1.0"
-source = "git+https://github.com/numas13/xash3d-sdk.git#5c00868a1ceca1ccfc16cd1d1701547959d71207"
+source = "git+https://github.com/numas13/xash3d-sdk.git#59a6fcd93f28d4f3ac63c2597541e1ccb7410c12"
 
 [[package]]
 name = "xash3d-maintui"
@@ -438,7 +438,7 @@ dependencies = [
 [[package]]
 name = "xash3d-shared"
 version = "0.1.0"
-source = "git+https://github.com/numas13/xash3d-sdk.git#5c00868a1ceca1ccfc16cd1d1701547959d71207"
+source = "git+https://github.com/numas13/xash3d-sdk.git#59a6fcd93f28d4f3ac63c2597541e1ccb7410c12"
 dependencies = [
  "bitflags",
  "csz",
@@ -450,7 +450,7 @@ dependencies = [
 [[package]]
 name = "xash3d-ui"
 version = "0.1.0"
-source = "git+https://github.com/numas13/xash3d-sdk.git#5c00868a1ceca1ccfc16cd1d1701547959d71207"
+source = "git+https://github.com/numas13/xash3d-sdk.git#59a6fcd93f28d4f3ac63c2597541e1ccb7410c12"
 dependencies = [
  "bitflags",
  "csz",

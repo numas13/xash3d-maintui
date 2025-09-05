@@ -11,7 +11,7 @@ use alloc::{boxed::Box, vec::Vec};
 use csz::CStrThin;
 use ratatui::prelude::*;
 use xash3d_ratatui::{XashBackend, XashTerminal};
-use xash3d_ui::{color::RGBA, engine, export::UnsyncGlobal, globals, raw::netadr_s, ActiveMenu};
+use xash3d_ui::{color::RGBA, export::UnsyncGlobal, prelude::*, raw::netadr_s, ActiveMenu};
 
 use crate::{
     export::Instance,
@@ -108,7 +108,7 @@ impl Default for Ui {
                 .ui_mut()
                 .activate_console(false);
         }
-        engine().add_command(c"fg", Some(cmd_fg));
+        engine().add_command(c"fg", cmd_fg).unwrap();
 
         Self {
             history: vec![],
@@ -128,8 +128,9 @@ impl Default for Ui {
 impl Ui {
     pub fn vid_init(&mut self) -> bool {
         let globals = globals();
-        self.terminal
-            .resize(globals.scrWidth as u16, globals.scrHeight as u16);
+        let width = globals.screen_width() as u16;
+        let height = globals.screen_height() as u16;
+        self.terminal.resize(width, height);
         true
     }
 
@@ -353,7 +354,7 @@ impl Ui {
                 if key == Key::Mouse(0) {
                     let backend = self.terminal.backend();
                     if event.is_down() {
-                        self.touch_start = globals().time;
+                        self.touch_start = globals().system_time_f32();
                         self.touch = Touch::Start(backend.cursor_position_in_pixels());
                         self.emulated_wheel = Some(backend.cursor_position());
                         return;
@@ -361,7 +362,7 @@ impl Ui {
                         let is_touch_active = self.touch.is_active();
                         self.touch = Touch::Stop;
                         self.emulated_wheel = None;
-                        if globals().time - self.touch_start >= 0.2 {
+                        if globals().system_time_f32() - self.touch_start >= 0.2 {
                             if is_touch_active {
                                 let key = Key::TouchStop(backend.cursor_position_in_pixels());
                                 let event = KeyEvent::new_touch(self.modifier, key);

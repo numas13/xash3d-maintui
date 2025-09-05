@@ -2,7 +2,7 @@ use core::ffi::CStr;
 
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
-use xash3d_ui::engine;
+use xash3d_ui::prelude::*;
 
 use crate::{
     config_list::{ConfigBackend, ConfigEntry, ConfigList},
@@ -30,13 +30,13 @@ impl MouseInvert {
 
 impl ConfigBackend<bool> for MouseInvert {
     fn read(&self) -> Option<bool> {
-        Some(engine().cvar::<f32>(Self::M_PITCH) < 0.0)
+        Some(engine().get_cvar::<f32>(Self::M_PITCH) < 0.0)
     }
 
     fn write(&mut self, value: bool) {
         let engine = engine();
-        let p = engine.cvar::<f32>(Self::M_PITCH).abs();
-        engine.cvar_set(Self::M_PITCH, if value { -p } else { p })
+        let p = engine.get_cvar::<f32>(Self::M_PITCH).abs();
+        engine.set_cvar(Self::M_PITCH, if value { -p } else { p })
     }
 }
 
@@ -92,11 +92,11 @@ impl ConfigBackend<bool> for Look {
     }
 
     fn read(&self) -> Option<bool> {
-        Some(engine().cvar(self.name))
+        Some(engine().get_cvar(self.name))
     }
 
     fn write(&mut self, value: bool) {
-        engine().cvar_set(self.name, value);
+        engine().set_cvar(self.name, value);
     }
 }
 

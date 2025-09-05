@@ -7,8 +7,8 @@ use hashbrown::HashMap;
 use xash3d_ui::{
     cell::SyncOnceCell,
     cvar::CVarFlags,
-    engine,
-    parser::{Error, Tokens},
+    parser::{TokenError, Tokens},
+    prelude::*,
 };
 
 const DEFAULT_LANGUAGE: &str = "english";
@@ -76,7 +76,7 @@ impl Strings {
         }
     }
 
-    fn parse_resource_file<'a>(&mut self, src: &'a str) -> Result<(), Error<'a>> {
+    fn parse_resource_file<'a>(&mut self, src: &'a str) -> Result<(), TokenError<'a>> {
         let mut tokens = Tokens::new(src);
         tokens.expect("lang")?;
         tokens.expect("{")?;

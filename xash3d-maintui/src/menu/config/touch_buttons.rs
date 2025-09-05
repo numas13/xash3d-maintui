@@ -5,7 +5,7 @@ use compact_str::{CompactString, ToCompactString};
 use csz::CStrThin;
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
-use xash3d_ui::{color::RGBA, engine};
+use xash3d_ui::{color::RGBA, prelude::*};
 
 use crate::{
     input::{Key, KeyEvent},

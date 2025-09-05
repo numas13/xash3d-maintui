@@ -11,8 +11,8 @@ use csz::CStrArray;
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
 use xash3d_ui::{
-    engine,
-    parser::{Error as ParseError, Tokens},
+    parser::{TokenError, Tokens},
+    prelude::*,
     utils::escape_command,
 };
 
@@ -41,7 +41,7 @@ struct Map {
     title: CompactString,
 }
 
-fn parse_map_list(s: &str) -> Result<Vec<Map>, ParseError<'_>> {
+fn parse_map_list(s: &str) -> Result<Vec<Map>, TokenError<'_>> {
     let mut list = Vec::new();
     list.push(Map {
         name: i18n::RANDOM_MAP.localize().into(),
@@ -140,7 +140,7 @@ impl CreateServer {
         engine.set_cvar_float(CVAR_MAXPLAYERS, parms.max_players as f32);
         let nat = engine.get_cvar_float(CVAR_PUBLIC) != 0.0 && parms.nat;
         warn!("nat {nat}");
-        engine.cvar_set(CVAR_SV_NAT, nat);
+        engine.set_cvar(CVAR_SV_NAT, nat);
     }
 
     fn start(&self) {

@@ -1,7 +1,7 @@
 use ab_glyph::{Font as _, FontRef, PxScaleFont, ScaleFont};
 use alloc::{boxed::Box, ffi::CString, vec::Vec};
 use ratatui::style::Modifier;
-use xash3d_ui::{engine, picture::Picture};
+use xash3d_ui::{picture::Picture, prelude::*};
 
 use crate::bmp::{Bmp, Components};
 

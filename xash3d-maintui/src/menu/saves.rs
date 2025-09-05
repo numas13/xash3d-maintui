@@ -10,7 +10,7 @@ use ratatui::{
 use xash3d_ratatui::XashBackend;
 use xash3d_ui::{
     consts::{CS_SIZE, CS_TIME},
-    engine,
+    prelude::*,
     raw::HIMAGE,
 };
 

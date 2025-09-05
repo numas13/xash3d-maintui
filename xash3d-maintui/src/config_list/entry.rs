@@ -5,7 +5,7 @@ use compact_str::{CompactString, ToCompactString};
 use ratatui::prelude::*;
 use unicode_width::UnicodeWidthStr;
 use xash3d_ratatui::XashBackend;
-use xash3d_ui::CVar;
+use xash3d_ui::cvar::{GetCvar, SetCvar};
 
 use crate::{
     input::{Key, KeyEvent},
@@ -78,7 +78,7 @@ impl<T> ConfigEntryBuilder<T> {
 
     pub fn build_for_cvar<'a, V>(self, name: &'static CStr) -> ConfigEntry<V, T>
     where
-        V: CVar<'a> + 'static,
+        V: GetCvar<'a> + SetCvar + 'static,
         T: Value<V>,
     {
         self.build(CVarBackend::new(name))
@@ -187,7 +187,7 @@ where
 
 impl<'a, V, T> WidgetMut<ConfirmResult> for ConfigEntry<V, T>
 where
-    V: CVar<'a> + Copy,
+    V: GetCvar<'a> + SetCvar + Copy,
     T: WidgetMut<ConfirmResult> + Value<V>,
 {
     fn render(&mut self, area: Rect, buf: &mut Buffer, screen: &Screen) {

@@ -6,7 +6,7 @@ use ratatui::{
     widgets::{Block, Borders, ListState, Paragraph, TableState, Wrap},
 };
 use unicode_width::UnicodeWidthStr;
-use xash3d_ui::engine;
+use xash3d_ui::prelude::*;
 
 use crate::strings;
 
@@ -176,7 +176,7 @@ pub fn render_hint(area: Rect, buf: &mut Buffer, items: usize, hint: Option<&str
 }
 
 pub fn is_dev() -> bool {
-    engine().cvar::<f32>(c"developer") as i32 > 0
+    engine().get_cvar::<i32>(c"developer") > 0
 }
 
 pub fn pretty_size(size: u64) -> String {

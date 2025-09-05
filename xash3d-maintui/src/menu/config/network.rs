@@ -2,7 +2,7 @@ use core::ffi::CStr;
 
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
-use xash3d_ui::engine;
+use xash3d_ui::prelude::*;
 
 use crate::{
     config_list::{ConfigBackend, ConfigEntry, ConfigList},

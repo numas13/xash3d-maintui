@@ -7,7 +7,7 @@ use compact_str::{CompactString, ToCompactString};
 use csz::{CStrArray, CStrThin};
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
-use xash3d_ui::engine;
+use xash3d_ui::prelude::*;
 
 use crate::{
     config_list::{CVarInvert, ConfigBackend, ConfigEntry, ConfigList},
@@ -64,7 +64,7 @@ impl RemapCvar {
 
 impl ConfigBackend<f32> for RemapCvar {
     fn read(&self) -> Option<f32> {
-        let v = engine().cvar(self.name);
+        let v = engine().get_cvar(self.name);
         let [a, b, c, d] = self.map;
         Some(Self::remap(v, a, b, c, d))
     }
@@ -72,7 +72,7 @@ impl ConfigBackend<f32> for RemapCvar {
     fn write(&mut self, value: f32) {
         let [a, b, c, d] = self.map;
         let v = Self::remap(value, c, d, a, b);
-        engine().cvar_set(self.name, v);
+        engine().set_cvar(self.name, v);
     }
 }
 
@@ -84,7 +84,7 @@ impl VideoMode {
 
 impl ConfigBackend<usize> for VideoMode {
     fn read(&self) -> Option<usize> {
-        Some(engine().cvar(Self::CVAR_NAME))
+        Some(engine().get_cvar(Self::CVAR_NAME))
     }
 
     fn write(&mut self, mode: usize) {
@@ -92,7 +92,7 @@ impl ConfigBackend<usize> for VideoMode {
         let mut buf = CStrArray::<256>::new();
         write!(buf.cursor(), "vid_setmode {}", mode).unwrap();
         engine.client_cmd(buf.as_thin());
-        engine.cvar_set(Self::CVAR_NAME, mode as f32);
+        engine.set_cvar(Self::CVAR_NAME, mode as f32);
     }
 }
 

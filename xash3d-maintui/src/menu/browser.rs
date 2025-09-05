@@ -14,7 +14,7 @@ use ratatui::{
 };
 use xash3d_protocol::{self as xash3d, color::Color as XashColor};
 use xash3d_ratatui::XashBackend;
-use xash3d_ui::{engine, raw::netadr_s};
+use xash3d_ui::{prelude::*, raw::netadr_s};
 
 use crate::{
     input::{Key, KeyEvent},
@@ -91,7 +91,7 @@ impl ServerEntry {
         Self {
             fake: true,
             favorite: true,
-            query_time: engine().time_f64(),
+            query_time: engine().system_time_f64(),
             ping: Duration::from_secs(999),
             info,
         }
@@ -110,7 +110,7 @@ impl ServerEntry {
     }
 
     fn update_ping(&mut self) {
-        self.ping = Duration::from_secs_f64(engine().time_f64() - self.query_time);
+        self.ping = Duration::from_secs_f64(engine().system_time_f64() - self.query_time);
         if self.info.protocol.is_legacy() {
             self.ping /= 2;
         }
@@ -247,7 +247,7 @@ impl Browser {
             state: State::default(),
             is_lan,
             sorted: false,
-            query_time: engine().time_f64(),
+            query_time: 0.0,
             menu,
             menu_last: None,
             sort_by: SortBy::default(),
@@ -839,7 +839,7 @@ impl Menu for Browser {
     }
 
     fn reset_ping(&mut self) {
-        self.query_time = engine().time_f64();
+        self.query_time = engine().system_time_f64();
     }
 }
 

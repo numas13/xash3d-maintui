@@ -1,6 +1,9 @@
 use core::ffi::CStr;
 
-use xash3d_ui::{engine, CVar};
+use xash3d_ui::{
+    cvar::{GetCvar, SetCvar},
+    prelude::*,
+};
 
 pub trait ConfigBackend<V> {
     fn is_enabled(&self) -> bool {
@@ -22,13 +25,13 @@ impl CVarBackend {
     }
 }
 
-impl<'a, V: CVar<'a>> ConfigBackend<V> for CVarBackend {
+impl<'a, V: GetCvar<'a> + SetCvar> ConfigBackend<V> for CVarBackend {
     fn read(&self) -> Option<V> {
-        Some(engine().cvar(self.name))
+        Some(engine().get_cvar(self.name))
     }
 
     fn write(&mut self, value: V) {
-        engine().cvar_set(self.name, value);
+        engine().set_cvar(self.name, value);
     }
 }
 
@@ -44,20 +47,20 @@ impl CVarInvert {
 
 impl ConfigBackend<bool> for CVarInvert {
     fn read(&self) -> Option<bool> {
-        Some(!engine().cvar::<bool>(self.name))
+        Some(!engine().get_cvar::<bool>(self.name))
     }
 
     fn write(&mut self, value: bool) {
-        engine().cvar_set(self.name, !value);
+        engine().set_cvar(self.name, !value);
     }
 }
 
 impl ConfigBackend<f32> for CVarInvert {
     fn read(&self) -> Option<f32> {
-        Some(-engine().cvar::<f32>(self.name))
+        Some(-engine().get_cvar::<f32>(self.name))
     }
 
     fn write(&mut self, value: f32) {
-        engine().cvar_set(self.name, -value);
+        engine().set_cvar(self.name, -value);
     }
 }

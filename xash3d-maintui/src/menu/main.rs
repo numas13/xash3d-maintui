@@ -5,7 +5,7 @@ use compact_str::{CompactString, ToCompactString};
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
 use xash3d_ui::{
-    engine, globals,
+    prelude::*,
     raw::{GameInfoFlags, GameType},
 };
 
@@ -129,14 +129,14 @@ impl MainMenu {
         let engine = engine();
         let globals = globals();
         let is_active = engine.client_is_active();
-        let is_single = globals.maxClients < 2;
+        let is_single = globals.max_clients() < 2;
         if self.is_client_active != is_active
             || self.is_single != is_single
-            || self.developer != globals.developer
+            || self.developer != globals.developer()
         {
             self.is_client_active = is_active;
             self.is_single = is_single;
-            self.developer = globals.developer;
+            self.developer = globals.developer();
             true
         } else {
             false
@@ -283,12 +283,12 @@ impl MainMenu {
     fn start_game(&mut self, skill: f32, cmd: &CStr, start_demo: bool) {
         self.reset();
         let eng = engine();
-        eng.cvar_set(c"skill", skill);
-        eng.cvar_set(c"deathmath", 0.0);
-        eng.cvar_set(c"teamplay", 0.0);
-        eng.cvar_set(c"coop", 0.0);
-        eng.cvar_set(c"maxplayers", 1.0);
-        eng.cvar_set(c"pausable", 1.0);
+        eng.set_cvar(c"skill", skill);
+        eng.set_cvar(c"deathmath", 0.0);
+        eng.set_cvar(c"teamplay", 0.0);
+        eng.set_cvar(c"coop", 0.0);
+        eng.set_cvar(c"maxplayers", 1.0);
+        eng.set_cvar(c"pausable", 1.0);
         eng.stop_background_track();
         if start_demo {
             let info = eng.get_game_info_2().unwrap();

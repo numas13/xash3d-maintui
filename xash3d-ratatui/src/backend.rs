@@ -6,7 +6,7 @@ use ratatui::{
     layout::{Position, Size},
     prelude::*,
 };
-use xash3d_ui::{color::RGBA, picture::Picture, prelude::*, raw::wrect_s};
+use xash3d_ui::{color::RGBA, ffi::common::wrect_s, picture::Picture, prelude::*};
 
 use crate::font::{Font, FontMap};
 

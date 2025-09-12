@@ -1,9 +1,11 @@
 use core::{fmt::Write, str};
 
 use alloc::{string::String, vec::Vec};
-use xash3d_ui::{parser::Tokens, prelude::*, raw::netadr_s};
-
-use crate::server_info::Protocol;
+use xash3d_ui::{
+    engine::{net::netadr_s, Protocol},
+    parser::Tokens,
+    prelude::*,
+};
 
 pub struct SavedServer {
     addr: netadr_s,

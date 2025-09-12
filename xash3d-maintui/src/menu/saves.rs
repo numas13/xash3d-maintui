@@ -9,9 +9,11 @@ use ratatui::{
 };
 use xash3d_ratatui::XashBackend;
 use xash3d_ui::{
-    consts::{CS_SIZE, CS_TIME},
+    ffi::{
+        common::{CS_SIZE, CS_TIME},
+        menu::HIMAGE,
+    },
     prelude::*,
-    raw::HIMAGE,
 };
 
 use crate::{
@@ -124,7 +126,7 @@ impl SavesMenu {
             };
 
             let mut comment = CompactString::default();
-            let mut title = &buf[..CS_SIZE - 1];
+            let mut title = &buf[..CS_SIZE as usize - 1];
 
             // handle `[auto]`, `[quick]`, etc
             if title.starts_with(b"[") {
@@ -151,14 +153,16 @@ impl SavesMenu {
             }
 
             let mut datetime = CompactString::default();
-            let date = CStr::from_bytes_until_nul(&buf[CS_SIZE..]);
+            let mut offset = CS_SIZE as usize;
+            let date = CStr::from_bytes_until_nul(&buf[offset..]);
             if let Ok(s) = date {
                 if let Ok(s) = s.to_str() {
                     datetime.push_str(s);
                     datetime.push(' ');
                 }
             }
-            let time = CStr::from_bytes_until_nul(&buf[CS_SIZE + CS_TIME..]);
+            offset += CS_TIME as usize;
+            let time = CStr::from_bytes_until_nul(&buf[offset..]);
             if let Ok(s) = time {
                 if let Ok(s) = s.to_str() {
                     datetime.push_str(s);

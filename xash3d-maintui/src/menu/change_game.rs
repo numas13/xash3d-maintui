@@ -4,7 +4,7 @@ use ratatui::{
     widgets::{Block, Borders, Row, Table},
 };
 use xash3d_ratatui::XashBackend;
-use xash3d_ui::{prelude::*, raw::gameinfo2_s};
+use xash3d_ui::{ffi::menu::gameinfo2_s, prelude::*};
 
 use crate::{
     input::KeyEvent,
@@ -32,10 +32,10 @@ impl From<&gameinfo2_s> for GameInfo {
     fn from(info: &gameinfo2_s) -> Self {
         Self {
             active: false,
-            ty: info.type_.to_compact_string(),
-            gamedir: info.gamefolder.to_compact_string(),
-            name: info.title.to_compact_string(),
-            version: info.version.to_compact_string(),
+            ty: info.type_().to_compact_string(),
+            gamedir: info.gamefolder().to_compact_string(),
+            name: info.title().to_compact_string(),
+            version: info.version().to_compact_string(),
             size: utils::pretty_size(info.size).to_compact_string(),
         }
     }
@@ -64,7 +64,7 @@ impl ChangeGame {
         let gamedir = engine.get_game_dir();
         for i in engine.get_mod_info_iter() {
             table.push(GameInfo {
-                active: *i.gamefolder == *gamedir,
+                active: i.gamefolder() == gamedir.as_thin(),
                 ..GameInfo::from(i)
             });
         }

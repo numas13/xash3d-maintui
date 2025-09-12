@@ -9,12 +9,7 @@ use compact_str::{CompactString, ToCompactString};
 use csz::{CStrArray, CStrThin};
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
-use xash3d_ui::{
-    color::RGBA,
-    picture::Picture,
-    prelude::*,
-    raw::{PictureFlags, HIMAGE},
-};
+use xash3d_ui::{color::RGBA, ffi::menu::HIMAGE, picture::Picture, prelude::*, raw::PictureFlags};
 
 use crate::{
     config_list::{ConfigBackend, ConfigEntry, ConfigList},

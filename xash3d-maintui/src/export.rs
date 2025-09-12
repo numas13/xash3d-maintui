@@ -6,9 +6,9 @@ use core::{
 use csz::CStrThin;
 use xash3d_ui::{
     color::RGBA,
+    engine::net::netadr_s,
     export::{export_dll, impl_unsync_global, UiDll},
     prelude::*,
-    raw::netadr_s,
 };
 
 use crate::ui::Ui;

@@ -2,7 +2,7 @@ use core::ffi::c_int;
 
 use ratatui::layout::{Position, Rect, Size};
 use xash3d_ratatui::XashBackend;
-use xash3d_ui::{color::RGBA, prelude::*, raw::wrect_s};
+use xash3d_ui::{color::RGBA, ffi::common::wrect_s, prelude::*};
 
 pub struct Screen {
     /// Cell size in pixels.

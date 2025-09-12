@@ -22,7 +22,7 @@ impl GameConfig {
         let mut list = ConfigList::with_back(i18n::TITLE.localize());
 
         let info = engine().get_game_info_2().unwrap();
-        if info.gamefolder.as_c_str() == c"cstrike" {
+        if info.gamefolder().as_c_str() == c"cstrike" {
             list.slider(i18n::WEAPON_LAG.localize(), c"cl_weaponlag");
         }
 

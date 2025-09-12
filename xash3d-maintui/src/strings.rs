@@ -48,7 +48,7 @@ impl Strings {
     fn load_language(&mut self, lang: &str) {
         trace!("load strings for language \"{lang}\"");
         let info = engine().get_game_info_2().unwrap();
-        let gamedir = info.gamefolder.as_c_str().to_str().unwrap();
+        let gamedir = info.gamefolder().as_c_str().to_str().unwrap();
         for i in ["gameui", "valve", "mainui", "maintui"] {
             if i != gamedir {
                 self.load_gamedir(i, lang);

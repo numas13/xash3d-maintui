@@ -4,6 +4,7 @@ use core::{
 };
 
 use compact_str::{CompactString, ToCompactString};
+use csz::CStrArray;
 use ratatui::{
     prelude::*,
     widgets::{Block, Borders, Cell, Paragraph, Row, Table},
@@ -70,10 +71,9 @@ impl Controls {
     }
 
     fn get_keys(&self, name: &str) -> [CompactString; 2] {
-        let eng = engine();
-
+        let engine = engine();
         let mut keys = [-1; 2];
-        let bindings = (0..MAX_KEYS as c_int).filter(|i| match eng.key_get_binding(*i) {
+        let bindings = (0..MAX_KEYS as c_int).filter(|i| match engine.key_get_binding(*i) {
             Some(s) => s.to_bytes().eq_ignore_ascii_case(name.as_bytes()),
             None => false,
         });
@@ -87,10 +87,13 @@ impl Controls {
 
         let keynum_to_str = |keynum| {
             if keynum != -1 {
-                eng.keynum_to_str(keynum).to_compact_string()
-            } else {
-                CompactString::default()
+                let mut buffer = CStrArray::<128>::new();
+                match engine.keynum_to_str_buffer(keynum, &mut buffer) {
+                    Ok(s) => return s.to_compact_string(),
+                    Err(_) => error!("failed to get string for key({keynum})"),
+                }
             }
+            CompactString::default()
         };
         [keynum_to_str(keys[0]), keynum_to_str(keys[1])]
     }
@@ -163,15 +166,16 @@ impl Controls {
         let Some(Item::Binding { bind, keys, .. }) = self.table.get(index) else {
             return;
         };
-        if !keys[1].is_empty() {
-            Self::unbind_command(bind);
-        }
         let engine = engine();
-        let s = engine.keynum_to_str(raw as c_int);
-        engine.client_cmd_now(format_args!("bind \"{s}\" \"{bind}\""));
-        // XXX: The engine uses a static buffer for keynum_to_str. Need to drop before
-        // call to load_keys or panic will be thrown.
-        drop(s);
+        let mut buffer = CStrArray::<128>::new();
+        if let Ok(s) = engine.keynum_to_str_buffer(raw as c_int, &mut buffer) {
+            if !keys[1].is_empty() {
+                Self::unbind_command(bind);
+            }
+            engine.client_cmd_now(format_args!("bind \"{s}\" \"{bind}\""));
+        } else {
+            error!("failed to bind key \"{bind}\"");
+        }
         self.load_keys();
         sound::confirm();
     }

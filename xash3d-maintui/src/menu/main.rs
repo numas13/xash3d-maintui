@@ -73,15 +73,15 @@ impl MainMenu {
     pub fn new() -> Self {
         let engine = engine();
         let info = engine.get_game_info_2().unwrap();
-        let has_demo = engine.is_map_valid(&info.demomap);
-        let title = info.title.to_str().unwrap_or("<invalid utf8>");
+        let has_demo = engine.is_map_valid(info.demomap());
+        let title = info.title().to_str().unwrap_or("<invalid utf8>");
         let hint_hazard_course = i18n::HAZARD_COURSE_HINT
             .localize()
             .replace("{title}", title)
             .into();
-        let has_skills = !info.flags.intersects(GameInfoFlags::NOSKILLS);
+        let has_skills = !info.flags().intersects(GameInfoFlags::NOSKILLS);
         let has_hazard_course =
-            !info.trainmap.is_empty() && !info.trainmap.eq_ignore_case(&info.startmap);
+            !info.trainmap.is_empty() && !info.trainmap().eq_ignore_case(info.startmap());
         let has_change_game = engine.get_cvar_float("host_allow_changegame") != 0.0;
 
         let mut menu = List::empty();
@@ -120,8 +120,8 @@ impl MainMenu {
             is_single: false,
             developer: -1,
             hint_hazard_course,
-            game_title: info.title.to_compact_string(),
-            game_type: info.gamemode,
+            game_title: info.title().to_compact_string(),
+            game_type: info.gamemode(),
         }
     }
 
@@ -292,7 +292,7 @@ impl MainMenu {
         eng.stop_background_track();
         if start_demo {
             let info = eng.get_game_info_2().unwrap();
-            eng.client_cmd(format_args!("newgame {}", &info.demomap));
+            eng.client_cmd(format_args!("newgame {}", &info.demomap()));
         } else {
             eng.client_cmd(cmd);
         }

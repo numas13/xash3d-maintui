@@ -20,7 +20,7 @@ bitflags = "2.6"
 libc = "0.2"
 hashbrown = "0.15"
 ratatui = { version = "0.29", default-features = false, features = ["unstable-widget-ref"] }
-csz = { git = "https://github.com/numas13/csz.git", features = ["alloc"] }
+csz = { version = "0.3.0", features = ["alloc"] }
 res = { git = "https://github.com/numas13/xash3d-sdk.git", package = "xash3d-hl-resources" }
 xash3d-ui = { git = "https://github.com/numas13/xash3d-sdk.git" }
 

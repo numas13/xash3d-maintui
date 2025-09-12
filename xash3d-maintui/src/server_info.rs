@@ -1,54 +1,6 @@
-use core::{fmt, str::FromStr};
-
 use compact_str::{CompactString, ToCompactString};
 use xash3d_protocol::color::trim_color;
-use xash3d_ui::raw::netadr_s;
-
-#[derive(Copy, Clone, PartialEq, Eq)]
-pub enum Protocol {
-    Xash(u8),
-    GoldSrc,
-}
-
-impl Protocol {
-    pub fn is_legacy(&self) -> bool {
-        matches!(self, Self::Xash(48))
-    }
-
-    // pub fn is_goldsrc(&self) -> bool {
-    //     matches!(self, Self::GoldSrc)
-    // }
-}
-
-impl Default for Protocol {
-    fn default() -> Self {
-        Self::Xash(49)
-    }
-}
-
-pub struct InvalidProtocolError;
-
-impl FromStr for Protocol {
-    type Err = InvalidProtocolError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "49" => Ok(Self::Xash(49)),
-            "48" | "legacy" => Ok(Self::Xash(48)),
-            "gs" | "goldsrc" => Ok(Self::GoldSrc),
-            _ => Err(InvalidProtocolError),
-        }
-    }
-}
-
-impl fmt::Display for Protocol {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Xash(p) => p.fmt(f),
-            Self::GoldSrc => "gs".fmt(f),
-        }
-    }
-}
+use xash3d_ui::engine::{net::netadr_s, Protocol};
 
 #[derive(Clone)]
 pub struct ServerInfo {
@@ -110,10 +62,11 @@ impl ServerInfo {
             let value = it.next()?;
             match key {
                 "p" => {
-                    ret.protocol = trim_color(value)
-                        .parse()
-                        .map(Protocol::Xash)
-                        .unwrap_or_default()
+                    ret.protocol = match trim_color(value).as_ref() {
+                        "48" => Protocol::Xash48,
+                        "49" => Protocol::Xash49,
+                        _ => Protocol::Current,
+                    }
                 }
                 "host" => ret.host = value.trim().into(),
                 "map" => ret.map = trim_color(value).into(),
@@ -122,7 +75,7 @@ impl ServerInfo {
                 "maxcl" => ret.maxcl = trim_color(value).parse().unwrap_or_default(),
                 "legacy" => {
                     if value == "1" {
-                        ret.protocol = Protocol::Xash(48);
+                        ret.protocol = Protocol::Xash48;
                     }
                 }
                 "gs" => {

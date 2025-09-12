@@ -1,12 +1,10 @@
 use core::{
-    fmt::Write,
     ops::{Deref, DerefMut},
     str,
     time::Duration,
 };
 
 use compact_str::ToCompactString;
-use csz::CStrArray;
 use ratatui::{
     prelude::*,
     style::{Color, Style, Stylize},
@@ -14,12 +12,15 @@ use ratatui::{
 };
 use xash3d_protocol::{self as xash3d, color::Color as XashColor};
 use xash3d_ratatui::XashBackend;
-use xash3d_ui::{prelude::*, raw::netadr_s};
+use xash3d_ui::{
+    engine::{net::netadr_s, Protocol},
+    prelude::*,
+};
 
 use crate::{
     input::{Key, KeyEvent},
     saved_servers::{SavedServer, SavedServers},
-    server_info::{Protocol, ServerInfo},
+    server_info::ServerInfo,
     strings::{self, Localize},
     ui::{utils, Control, Menu, Screen, State},
     widgets::{InputPopup, InputResult, List, ListPopup, MyTable, SelectResult, WidgetMut},
@@ -118,12 +119,8 @@ impl ServerEntry {
 
     fn connect(&self, password: Option<&str>) {
         let engine = engine();
-        let address = engine.addr_to_string(self.addr);
-        trace!("Browser: connect to {address}");
-        let mut cmd = CStrArray::<256>::new();
-        write!(cmd.cursor(), "connect {address} {}", self.protocol).unwrap();
         engine.set_cvar_string(c"password", password.unwrap_or_default());
-        engine.client_cmd(&cmd);
+        engine.client_join(self.addr, self.protocol);
     }
 }
 
@@ -404,8 +401,8 @@ impl Browser {
                 self.state.cancel_default();
                 return;
             }
-            PROTOCOL_XASH3D_48 => Protocol::Xash(48),
-            PROTOCOL_XASH3D_49 => Protocol::Xash(49),
+            PROTOCOL_XASH3D_48 => Protocol::Xash48,
+            PROTOCOL_XASH3D_49 => Protocol::Xash49,
             PROTOCOL_GOLD_SOURCE_48 => Protocol::GoldSrc,
             item => {
                 warn!("{item} is not implemented yet");

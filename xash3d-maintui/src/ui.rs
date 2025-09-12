@@ -11,7 +11,7 @@ use alloc::{boxed::Box, vec::Vec};
 use csz::CStrThin;
 use ratatui::prelude::*;
 use xash3d_ratatui::{XashBackend, XashTerminal};
-use xash3d_ui::{color::RGBA, export::UnsyncGlobal, prelude::*, raw::netadr_s, ActiveMenu};
+use xash3d_ui::{color::RGBA, engine::net::netadr_s, export::UnsyncGlobal, prelude::*, ActiveMenu};
 
 use crate::{
     export::Instance,

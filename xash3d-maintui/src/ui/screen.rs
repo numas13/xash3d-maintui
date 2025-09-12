@@ -20,14 +20,23 @@ impl Screen {
         }
     }
 
+    pub fn area_to_pixels(&self, area: Rect) -> Rect {
+        Rect {
+            x: area.x * self.cell.width,
+            y: area.y * self.cell.height,
+            width: area.width * self.cell.width,
+            height: area.height * self.cell.height,
+        }
+    }
+
     pub fn draw_picture(&self, area: Rect, pic: Picture, colors: &[RGBA]) {
         let engine = engine();
-        let mut x = (area.x * self.cell.width) as i32;
-        let mut y = (area.y * self.cell.height) as i32;
-        let mut w = (area.width * self.cell.width) as u32;
-        let mut h = (area.height * self.cell.height) as u32;
-        let area = UiRect::new(x, y, w, h);
-        engine.fill_rgba(RGBA::BLACK, area);
+        let area = self.area_to_pixels(area);
+        let mut x = area.x as i32;
+        let mut y = area.y as i32;
+        let mut w = area.width as u32;
+        let mut h = area.height as u32;
+        engine.fill_rgba(RGBA::BLACK, UiRect::new(x, y, w, h));
 
         let size = pic.size();
         let r = size.width as f32 / size.height as f32;

@@ -84,6 +84,10 @@ impl ConfigList {
         ret
     }
 
+    pub fn is_grab_input(&self) -> bool {
+        matches!(self.state.focus(), Focus::Grab(_))
+    }
+
     pub fn add(&mut self, item: impl ConfigItem + 'static) {
         self.items.push(Box::new(item));
     }

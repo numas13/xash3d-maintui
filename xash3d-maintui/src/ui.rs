@@ -49,6 +49,7 @@ impl Control {
 
 #[allow(unused_variables)]
 pub trait Menu {
+    fn vid_init(&mut self) {}
     fn active(&mut self) {}
     fn on_menu_hide(&mut self) {}
     fn draw(&mut self, area: Rect, buf: &mut Buffer, screen: &Screen);
@@ -136,6 +137,9 @@ impl Ui {
         let width = globals.screen_width();
         let height = globals.screen_height();
         self.terminal.resize(width, height);
+        for menu in &mut self.history {
+            menu.vid_init();
+        }
         true
     }
 

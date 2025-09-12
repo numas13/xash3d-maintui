@@ -1,7 +1,8 @@
 use core::{
-    cell::RefCell,
+    cell::{Cell, RefCell},
     ffi::{c_int, CStr},
     fmt::Write,
+    mem,
 };
 
 use alloc::{ffi::CString, rc::Rc, vec::Vec};
@@ -11,12 +12,17 @@ use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
 use xash3d_ui::{
     color::RGBA,
+    entity::EntityType,
+    ffi::common::{kRenderNormal, vec3_t, EF_FULLBRIGHT},
+    misc::{Point as UiPoint, Rect as UiRect, Size as UiSize},
     picture::{Picture, PictureFlags},
+    prelude::*,
+    render::ViewPass,
 };
 
 use crate::{
     config_list::{ConfigBackend, ConfigEntry, ConfigList},
-    input::KeyEvent,
+    input::{Key, KeyEvent},
     prelude::*,
     strings::Localize,
     ui::{
@@ -299,17 +305,31 @@ impl ModelPreview {
 
 struct Model {
     engine: UiEngineRef,
+    grab_input: Cell<bool>,
     names: Vec<CompactString>,
     preview: RefCell<Option<ModelPreview>>,
 }
 
 impl Model {
     fn new() -> Self {
+        let engine = engine();
+        let ent = engine.get_player_model_raw();
+        if let Some(ent) = unsafe { ent.as_mut() } {
+            let angles = vec3_t::new(0.0, 180.0, 0.0);
+            ent.angles = angles;
+            ent.curstate.angles = angles;
+        }
+
         Self {
-            engine: engine(),
+            engine,
+            grab_input: Cell::new(false),
             names: get_player_models(),
             preview: RefCell::new(None),
         }
+    }
+
+    fn is_grab_input(&self) -> bool {
+        self.grab_input.get()
     }
 
     fn get_model_name(&self) -> &CStrThin {
@@ -323,24 +343,151 @@ impl Model {
         self.names.iter().position(|i| i == name).unwrap_or(0)
     }
 
+    fn change_animation_sequence(&self, offset: c_int) {
+        let ent = engine().get_player_model_raw();
+        if let Some(ent) = unsafe { ent.as_mut() } {
+            let seq = ent.curstate.sequence.wrapping_add(offset).max(0);
+            ent.curstate.sequence = seq;
+            trace!("player model preview animation sequence is {seq}");
+        }
+    }
+
+    fn rotate(&self, yaw: f32) {
+        let ent = engine().get_player_model_raw();
+        if let Some(ent) = unsafe { ent.as_mut() } {
+            let mut yaw = ent.angles.yaw() + yaw * 30.0;
+            if yaw >= 180.0 {
+                yaw -= 360.0;
+            } else if yaw <= -180.0 {
+                yaw += 360.0;
+            }
+            ent.angles.set_yaw(yaw);
+            ent.curstate.angles.set_yaw(yaw);
+        }
+    }
+
+    fn update_entity(&self) {
+        let ent = engine().get_player_model_raw();
+        if ent.is_null() {
+            return;
+        }
+
+        let ent = unsafe { &mut *ent };
+        let old_angles = ent.angles;
+        let old_sequence = ent.curstate.sequence.max(0);
+        *ent = unsafe { mem::zeroed() };
+
+        ent.index = 0;
+        // draw as player model
+        ent.player = 1;
+        ent.curstate.body = 0;
+        // IMPORTANT: always set player index to 1
+        ent.curstate.number = 1;
+        ent.curstate.sequence = old_sequence;
+        ent.curstate.scale = 1.0;
+        ent.curstate.frame = 0.0;
+        ent.curstate.framerate = 1.0;
+        ent.curstate.effects |= EF_FULLBRIGHT;
+        ent.curstate.controller.fill(127);
+        ent.latched.prevcontroller.fill(127);
+
+        let origin = vec3_t::new(45.0, 0.0, 2.0);
+        ent.origin = origin;
+        ent.angles = old_angles;
+
+        ent.curstate.origin = origin;
+        ent.curstate.angles = old_angles;
+    }
+
     fn update_preview(&self) {
+        self.update_entity();
+
         let name = self.get_model_name();
-        let mut path = CStrArray::<512>::new();
-        write!(path.cursor(), "models/player/{name}/{name}.bmp").unwrap();
         let engine = engine();
-        let pic = engine.pic_load_with_flags(&path, PictureFlags::KEEP_SOURCE);
-        let preview = pic.map(|pic| {
-            let top_color = engine.get_cvar_float(c"topcolor");
-            let bottom_color = engine.get_cvar_float(c"bottomcolor");
-            engine.process_image(
-                pic.as_raw(),
-                -1.0,
-                top_color as c_int,
-                bottom_color as c_int,
-            );
-            ModelPreview::new(pic)
-        });
+        let preview = engine
+            .pic_load_with_flags(
+                format_args!("models/player/{name}/{name}.bmp"),
+                PictureFlags::KEEP_SOURCE,
+            )
+            .map(|pic| {
+                let top_color = engine.get_cvar_float(c"topcolor");
+                let bottom_color = engine.get_cvar_float(c"bottomcolor");
+                engine.process_image(
+                    pic.as_raw(),
+                    -1.0,
+                    top_color as c_int,
+                    bottom_color as c_int,
+                );
+                ModelPreview::new(pic)
+            });
         self.preview.replace(preview.ok());
+
+        if let Some(ent) = unsafe { engine.get_player_model_raw().as_mut() } {
+            if name == c"player" {
+                engine.set_player_model_raw(ent, "models/player.mdl");
+            } else {
+                engine.set_player_model_raw(ent, format_args!("models/player/{name}/{name}.mdl"));
+            }
+        }
+    }
+
+    fn draw(&self, area: Rect, buf: &mut Buffer, screen: &Screen) {
+        if let Some(preview) = self.preview.borrow().as_ref() {
+            Image::new(preview.pic).render(area, buf, screen);
+            return;
+        }
+
+        let engine = engine();
+        let px_area = screen.area_to_pixels(area);
+        let pos = UiPoint::new(px_area.x.into(), px_area.y.into());
+        let size = UiSize::new(px_area.width.into(), px_area.height.into());
+        engine.fill_rgba(RGBA::BLACK, UiRect::from((pos, size)));
+
+        let ent = engine.get_player_model_raw();
+        if let Some(ent) = unsafe { ent.as_mut() } {
+            // reset body, so it will be changed by cl_himodels setting
+            ent.curstate.body = 0;
+
+            ent.curstate.rendermode = kRenderNormal as c_int;
+            ent.curstate.renderamt = 255;
+
+            let viewpass = ViewPass::builder()
+                .pos(pos.x, pos.y)
+                .build(size.width as i32, size.height as i32);
+            let x = 45.0 / (viewpass.fov_y() / 2.0).to_radians().tan();
+            ent.origin.set_x(x);
+            ent.curstate.origin.set_x(x);
+            engine.clear_scene();
+            engine.create_visible_entity_raw(ent, EntityType::Normal);
+            engine.render_scene(viewpass);
+            return;
+        }
+
+        // just draw some text if no image or model
+        let name = self.get_model_name().as_c_str().to_string_lossy();
+        Line::raw(name).render(area, buf);
+    }
+
+    fn key_event(&self, _backend: &XashBackend, event: KeyEvent) {
+        let key = event.key();
+        match key {
+            Key::Mouse(0) => {
+                self.change_animation_sequence(1);
+            }
+            Key::Mouse(1) => {
+                self.change_animation_sequence(-1);
+            }
+            Key::TouchStart(_) => {
+                self.grab_input.set(true);
+            }
+            Key::TouchStop(_) => {
+                self.grab_input.set(false);
+            }
+            Key::Touch(x, _) => {
+                self.rotate(-(x as f32) * 0.03);
+            }
+            _ => {}
+        }
     }
 }
 
@@ -391,6 +538,7 @@ pub struct MultiplayerConfig {
     list: ConfigList,
     logo: Rc<Logo>,
     model: Rc<Model>,
+    model_area: Rect,
 }
 
 impl MultiplayerConfig {
@@ -450,11 +598,20 @@ impl MultiplayerConfig {
                 .build_for_cvar(c"cl_himodels")
         });
 
-        Self { list, logo, model }
+        Self {
+            list,
+            logo,
+            model,
+            model_area: Rect::default(),
+        }
     }
 }
 
 impl Menu for MultiplayerConfig {
+    fn vid_init(&mut self) {
+        self.model.update_preview();
+    }
+
     fn draw(&mut self, area: Rect, buf: &mut Buffer, screen: &Screen) {
         let constraints = [Constraint::Percentage(50), Constraint::Percentage(50)];
         let layout = if is_wide(area) {
@@ -478,15 +635,18 @@ impl Menu for MultiplayerConfig {
             Image::with_color(preview.pic, preview.color).render(logo_area, buf, screen);
         }
 
-        let model_area = utils::main_block(i18n::MODEL_LABEL, model_area, buf);
-        if let Some(preview) = self.model.preview.borrow().as_ref() {
-            Image::new(preview.pic).render(model_area, buf, screen);
-        } else if let Ok(name) = self.model.get_model_name().to_str() {
-            Line::raw(name).render(model_area, buf);
-        }
+        self.model_area = utils::main_block(i18n::MODEL_LABEL, model_area, buf);
+        self.model.draw(self.model_area, buf, screen);
     }
 
     fn key_event(&mut self, backend: &XashBackend, event: KeyEvent) -> Control {
+        if self.model.is_grab_input()
+            || (!self.list.is_grab_input() && backend.is_cursor_in_area(self.model_area))
+        {
+            self.model.key_event(backend, event);
+            return Control::None;
+        }
+
         self.list.key_event(backend, event)
     }
 

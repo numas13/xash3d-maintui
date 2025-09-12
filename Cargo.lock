@@ -86,9 +86,9 @@ dependencies = [
 
 [[package]]
 name = "csz"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a757f623512cdd0385c57b4801b3430c6c210e9c81896eed6666bd7724f57cf"
+checksum = "eed14b6b5a4db14e0d014f67183794d016c154b11e965030d1248234b7fea2b3"
 
 [[package]]
 name = "darling"

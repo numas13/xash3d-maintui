@@ -1,9 +1,6 @@
 use core::ffi::CStr;
 
-use xash3d_ui::{
-    cvar::{GetCvar, SetCvar},
-    prelude::*,
-};
+use xash3d_ui::prelude::*;
 
 pub trait ConfigBackend<V> {
     fn is_enabled(&self) -> bool {
@@ -25,12 +22,32 @@ impl CVarBackend {
     }
 }
 
-impl<'a, V: GetCvar<'a> + SetCvar> ConfigBackend<V> for CVarBackend {
-    fn read(&self) -> Option<V> {
+impl ConfigBackend<bool> for CVarBackend {
+    fn read(&self) -> Option<bool> {
         Some(engine().get_cvar(self.name))
     }
 
-    fn write(&mut self, value: V) {
+    fn write(&mut self, value: bool) {
+        engine().set_cvar(self.name, value);
+    }
+}
+
+impl ConfigBackend<usize> for CVarBackend {
+    fn read(&self) -> Option<usize> {
+        Some(engine().get_cvar(self.name))
+    }
+
+    fn write(&mut self, value: usize) {
+        engine().set_cvar(self.name, value);
+    }
+}
+
+impl ConfigBackend<f32> for CVarBackend {
+    fn read(&self) -> Option<f32> {
+        Some(engine().get_cvar(self.name))
+    }
+
+    fn write(&mut self, value: f32) {
         engine().set_cvar(self.name, value);
     }
 }

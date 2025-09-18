@@ -76,9 +76,9 @@ impl<T> ConfigEntryBuilder<T> {
         ret
     }
 
-    pub fn build_for_cvar<'a, V>(self, name: &'static CStr) -> ConfigEntry<V, T>
+    pub fn build_for_cvar<V>(self, name: &'static CStr) -> ConfigEntry<V, T>
     where
-        V: GetCvar<'a> + SetCvar + 'static,
+        CVarBackend: ConfigBackend<V>,
         T: Value<V>,
     {
         self.build(CVarBackend::new(name))

@@ -4,14 +4,12 @@ use alloc::vec::Vec;
 use compact_str::{CompactString, ToCompactString};
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
-use xash3d_ui::{
-    prelude::*,
-    raw::{GameInfoFlags, GameType},
-};
+use xash3d_ui::game_info::{GameInfoFlags, GameType};
 
 use crate::{
     input::{Key, KeyEvent},
     menu::{self, define_menu_items},
+    prelude::*,
     strings::Localize,
     ui::{utils, Control, Menu, Screen, State},
     widgets::{ConfirmPopup, ConfirmResult, List, ListPopup, SelectResult, WidgetMut},
@@ -72,8 +70,8 @@ pub struct MainMenu {
 impl MainMenu {
     pub fn new() -> Self {
         let engine = engine();
-        let info = engine.get_game_info_2().unwrap();
-        let has_demo = engine.is_map_valid(info.demomap());
+        let info = engine.game_info2().unwrap();
+        let has_demo = engine.is_map_valid(info.demo_map());
         let title = info.title().to_str().unwrap_or("<invalid utf8>");
         let hint_hazard_course = i18n::HAZARD_COURSE_HINT
             .localize()
@@ -81,7 +79,7 @@ impl MainMenu {
             .into();
         let has_skills = !info.flags().intersects(GameInfoFlags::NOSKILLS);
         let has_hazard_course =
-            !info.trainmap.is_empty() && !info.trainmap().eq_ignore_case(info.startmap());
+            !info.train_map().is_empty() && !info.train_map().eq_ignore_case(info.start_map());
         let has_change_game = engine.get_cvar_float("host_allow_changegame") != 0.0;
 
         let mut menu = List::empty();
@@ -121,13 +119,13 @@ impl MainMenu {
             developer: -1,
             hint_hazard_course,
             game_title: info.title().to_compact_string(),
-            game_type: info.gamemode(),
+            game_type: info.game_mode(),
         }
     }
 
     fn is_changed(&mut self) -> bool {
         let engine = engine();
-        let globals = globals();
+        let globals = &engine.globals;
         let is_active = engine.client_is_active();
         let is_single = globals.max_clients() < 2;
         if self.is_client_active != is_active
@@ -291,8 +289,8 @@ impl MainMenu {
         eng.set_cvar(c"pausable", 1.0);
         eng.stop_background_track();
         if start_demo {
-            let info = eng.get_game_info_2().unwrap();
-            eng.client_cmd(format_args!("newgame {}", &info.demomap()));
+            let info = eng.game_info2().unwrap();
+            eng.client_cmd(format_args!("newgame {}", &info.demo_map()));
         } else {
             eng.client_cmd(cmd);
         }

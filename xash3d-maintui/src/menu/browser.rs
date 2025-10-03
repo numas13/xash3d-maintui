@@ -12,13 +12,11 @@ use ratatui::{
 };
 use xash3d_protocol::{self as xash3d, color::Color as XashColor};
 use xash3d_ratatui::XashBackend;
-use xash3d_ui::{
-    engine::{net::netadr_s, Protocol},
-    prelude::*,
-};
+use xash3d_ui::engine::{net::netadr_s, Protocol};
 
 use crate::{
     input::{Key, KeyEvent},
+    prelude::*,
     saved_servers::{SavedServer, SavedServers},
     server_info::ServerInfo,
     strings::{self, Localize},
@@ -625,7 +623,8 @@ impl Browser {
             return;
         };
         if let Some(server) = self.table.items.get_mut(selected) {
-            let address = engine().addr_to_string_ref(&server.addr);
+            let engine = engine();
+            let address = engine.addr_to_string_ref(&server.addr);
             if self.favorite_servers.remove(&server.addr).is_some() {
                 server.favorite = false;
                 trace!("remove server \"{address}\" from favorite list");

@@ -4,10 +4,11 @@ use ratatui::{
     widgets::{Block, Borders, Row, Table},
 };
 use xash3d_ratatui::XashBackend;
-use xash3d_ui::{ffi::menu::gameinfo2_s, prelude::*};
+use xash3d_ui::game_info::GameInfo2;
 
 use crate::{
     input::KeyEvent,
+    prelude::*,
     strings::Localize,
     ui::{utils, Control, Menu, Screen, State},
     widgets::{ConfirmPopup, ConfirmResult, List, MyTable, SelectResult, WidgetMut},
@@ -28,15 +29,15 @@ struct GameInfo {
     size: CompactString,
 }
 
-impl From<&gameinfo2_s> for GameInfo {
-    fn from(info: &gameinfo2_s) -> Self {
+impl From<&GameInfo2> for GameInfo {
+    fn from(info: &GameInfo2) -> Self {
         Self {
             active: false,
-            ty: info.type_().to_compact_string(),
-            gamedir: info.gamefolder().to_compact_string(),
+            ty: info.game_type().to_compact_string(),
+            gamedir: info.game_dir().to_compact_string(),
             name: info.title().to_compact_string(),
-            version: info.version().to_compact_string(),
-            size: utils::pretty_size(info.size).to_compact_string(),
+            version: info.game_version().to_compact_string(),
+            size: utils::pretty_size(info.size()).to_compact_string(),
         }
     }
 }
@@ -62,9 +63,9 @@ impl ChangeGame {
 
         let engine = engine();
         let gamedir = engine.get_game_dir();
-        for i in engine.get_mod_info_iter() {
+        for i in engine.mod_info_iter() {
             table.push(GameInfo {
-                active: i.gamefolder() == gamedir.as_thin(),
+                active: i.game_dir() == gamedir.as_thin(),
                 ..GameInfo::from(i)
             });
         }

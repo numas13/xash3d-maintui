@@ -26,6 +26,7 @@ mod i18n;
 mod input;
 mod macros;
 mod menu;
+mod prelude;
 mod saved_servers;
 mod server_info;
 mod strings;

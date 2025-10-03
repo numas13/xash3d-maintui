@@ -7,11 +7,11 @@ use compact_str::{CompactString, ToCompactString};
 use csz::{CStrArray, CStrThin};
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
-use xash3d_ui::prelude::*;
 
 use crate::{
     config_list::{CVarInvert, ConfigBackend, ConfigEntry, ConfigList},
     input::KeyEvent,
+    prelude::*,
     strings::Localize,
     ui::{Control, Menu, Screen},
 };
@@ -38,7 +38,8 @@ fn get_renderer_name(short: &CStrThin) -> Option<CompactString> {
 }
 
 fn get_loaded_renderer_name() -> CompactString {
-    let short = engine().get_cvar_string(c"r_refdll_loaded");
+    let engine = engine();
+    let short = engine.get_cvar_string(c"r_refdll_loaded");
     if !short.is_empty() {
         if let Some(name) = get_renderer_name(short) {
             return name;

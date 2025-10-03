@@ -12,13 +12,13 @@ use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
 use xash3d_ui::{
     parser::{TokenError, Tokens},
-    prelude::*,
     utils::escape_command,
 };
 
 use crate::{
     config_list::{Button, ConfigBackend, ConfigEntry, ConfigItem, ConfigList},
     input::KeyEvent,
+    prelude::*,
     strings::Localize,
     ui::{Control, Menu, Screen},
     widgets::{Checkbox, Input, ListPopup},
@@ -130,7 +130,7 @@ impl CreateServer {
         writeln!(cur, "maxplayers {max_players};")?;
         // TODO:
         // writeln!(cur, "latch;")?;
-        writeln!(cur, "map {}", escape_command(map))
+        writeln!(cur, "map {}", escape_command(engine(), map))
     }
 
     fn save_cvars(&self, parms: &ServerParameters) {

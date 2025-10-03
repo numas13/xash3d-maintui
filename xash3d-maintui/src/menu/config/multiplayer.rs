@@ -9,11 +9,15 @@ use compact_str::{CompactString, ToCompactString};
 use csz::{CStrArray, CStrThin};
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
-use xash3d_ui::{color::RGBA, ffi::menu::HIMAGE, picture::Picture, prelude::*, raw::PictureFlags};
+use xash3d_ui::{
+    color::RGBA,
+    picture::{Picture, PictureFlags},
+};
 
 use crate::{
     config_list::{ConfigBackend, ConfigEntry, ConfigList},
     input::KeyEvent,
+    prelude::*,
     strings::Localize,
     ui::{
         utils::{self, is_wide},
@@ -109,7 +113,8 @@ impl LogoColor {
 }
 
 fn get_logo_list() -> Vec<(CString, CompactString)> {
-    let files = engine().get_files_list(c"logos/*.*", false);
+    let engine = engine();
+    let files = engine.get_files_list(c"logos/*.*", false);
     let mut list = vec![];
     for i in files.iter() {
         let Ok(path) = i.to_str() else {
@@ -178,12 +183,12 @@ fn get_player_models() -> Vec<CompactString> {
 }
 
 struct LogoPreview {
-    pic: Picture<CString>,
+    pic: Picture,
     color: &'static [RGBA],
 }
 
 impl LogoPreview {
-    fn new(pic: Picture<CString>, color: &'static [RGBA]) -> Self {
+    fn new(pic: Picture, color: &'static [RGBA]) -> Self {
         Self { pic, color }
     }
 }
@@ -204,12 +209,14 @@ impl Logo {
     }
 
     fn get_logo_index(&self) -> usize {
-        let logo = engine().get_cvar_string(CL_LOGOFILE).to_str().unwrap();
+        let engine = engine();
+        let logo = engine.get_cvar_string(CL_LOGOFILE).to_str().unwrap();
         self.names.iter().position(|i| i.1 == logo).unwrap_or(0)
     }
 
     fn get_color_index(&self) -> usize {
-        let color = engine().get_cvar_string(CL_LOGOCOLOR);
+        let engine = engine();
+        let color = engine.get_cvar_string(CL_LOGOCOLOR);
         self.colors
             .iter()
             .position(|i| i.value == color)
@@ -250,7 +257,7 @@ impl Logo {
         let Some(path) = self.get_path(self.get_logo_index()) else {
             return;
         };
-        let pic = Picture::<CString>::load(path.into(), PictureFlags::empty()).unwrap();
+        let pic = engine().pic_load(path).unwrap();
         let color = self.get_color(self.get_color_index());
         *self.preview.borrow_mut() = Some(LogoPreview::new(pic, color));
     }
@@ -281,16 +288,17 @@ impl ConfigBackend<usize> for LogoColorConfig {
 }
 
 struct ModelPreview {
-    pic: HIMAGE,
+    pic: Picture,
 }
 
 impl ModelPreview {
-    fn new(pic: HIMAGE) -> Self {
+    fn new(pic: Picture) -> Self {
         Self { pic }
     }
 }
 
 struct Model {
+    engine: UiEngineRef,
     names: Vec<CompactString>,
     preview: RefCell<Option<ModelPreview>>,
 }
@@ -298,13 +306,14 @@ struct Model {
 impl Model {
     fn new() -> Self {
         Self {
+            engine: engine(),
             names: get_player_models(),
             preview: RefCell::new(None),
         }
     }
 
     fn get_model_name(&self) -> &CStrThin {
-        engine().get_cvar_string(MODEL)
+        self.engine.get_cvar_string(MODEL)
     }
 
     fn get_model_index(&self) -> usize {
@@ -319,16 +328,19 @@ impl Model {
         let mut path = CStrArray::<512>::new();
         write!(path.cursor(), "models/player/{name}/{name}.bmp").unwrap();
         let engine = engine();
-        let pic = engine.pic_load(path.as_c_str(), None, PictureFlags::KEEP_SOURCE.bits());
-        let preview = if let Some(pic) = pic {
+        let pic = engine.pic_load_with_flags(&path, PictureFlags::KEEP_SOURCE);
+        let preview = pic.map(|pic| {
             let top_color = engine.get_cvar_float(c"topcolor");
             let bottom_color = engine.get_cvar_float(c"bottomcolor");
-            engine.process_image(pic, -1.0, top_color as c_int, bottom_color as c_int);
-            Some(ModelPreview::new(pic))
-        } else {
-            None
-        };
-        self.preview.replace(preview);
+            engine.process_image(
+                pic.as_raw(),
+                -1.0,
+                top_color as c_int,
+                bottom_color as c_int,
+            );
+            ModelPreview::new(pic)
+        });
+        self.preview.replace(preview.ok());
     }
 }
 
@@ -463,7 +475,7 @@ impl Menu for MultiplayerConfig {
 
         let logo_area = utils::main_block(i18n::LOGO_LABEL, logo_area, buf);
         if let Some(preview) = self.logo.preview.borrow().as_ref() {
-            Image::with_color(preview.pic.raw(), preview.color).render(logo_area, buf, screen);
+            Image::with_color(preview.pic, preview.color).render(logo_area, buf, screen);
         }
 
         let model_area = utils::main_block(i18n::MODEL_LABEL, model_area, buf);

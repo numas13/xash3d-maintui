@@ -9,15 +9,13 @@ use ratatui::{
 };
 use xash3d_ratatui::XashBackend;
 use xash3d_ui::{
-    ffi::{
-        common::{CS_SIZE, CS_TIME},
-        menu::HIMAGE,
-    },
-    prelude::*,
+    ffi::common::{CS_SIZE, CS_TIME},
+    picture::Picture,
 };
 
 use crate::{
     input::{Key, KeyEvent},
+    prelude::*,
     strings::Localize,
     ui::{sound, utils, Control, Menu, Screen, State},
     widgets::{
@@ -52,14 +50,13 @@ struct SaveInfo {
 
 struct SavePreview {
     filename: CompactString,
-    picture: Option<HIMAGE>,
+    pic: Option<Picture>,
 }
 
 impl SavePreview {
     fn new(filename: CompactString) -> Self {
-        let path = format!("save/{filename}.bmp");
-        let picture = engine().pic_load(path, None, 0);
-        Self { filename, picture }
+        let pic = engine().pic_load(format_args!("save/{filename}.bmp")).ok();
+        Self { filename, pic }
     }
 }
 
@@ -267,7 +264,7 @@ impl SavesMenu {
             self.preview = Some(SavePreview::new(save.filename.clone()));
         }
         if let Some(preview) = &self.preview {
-            if let Some(pic) = preview.picture {
+            if let Some(pic) = preview.pic {
                 Image::new(pic).render(inner_area, buf, screen);
             }
         }

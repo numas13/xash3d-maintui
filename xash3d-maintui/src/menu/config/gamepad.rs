@@ -7,11 +7,11 @@ use alloc::rc::Rc;
 use csz::CStrArray;
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
-use xash3d_ui::prelude::*;
 
 use crate::{
     config_list::{ConfigBackend, ConfigEntry, ConfigList},
     input::KeyEvent,
+    prelude::*,
     strings::Localize,
     ui::{Control, Menu, Screen},
     widgets::ListPopup,
@@ -193,7 +193,8 @@ impl AxisBindingMap {
     }
 
     fn read(&self) {
-        let s = engine().get_cvar_string(Self::CVAR_NAME);
+        let engine = engine();
+        let s = engine.get_cvar_string(Self::CVAR_NAME);
         let mut map = self.map.borrow_mut();
         for (i, c) in map.iter_mut().zip(s.bytes()) {
             *i = Axis::from(c);

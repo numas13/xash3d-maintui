@@ -389,9 +389,9 @@ checksum = "1fc81956842c57dac11422a97c3b8195a1ff727f06e85c84ed2e8aa277c9a0fd"
 
 [[package]]
 name = "xash3d-ffi"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6ec603a55e5df1e8e0f4117c19cb76eb2b560deb5564fecf98f538c602145e81"
+checksum = "451f8f5fcf60a63513ded61047389de3ab2837de02340f95bd7f32651b6708c3"
 dependencies = [
  "libc",
  "libm",
@@ -400,7 +400,7 @@ dependencies = [
 [[package]]
 name = "xash3d-hl-resources"
 version = "0.1.0"
-source = "git+https://github.com/numas13/xash3d-sdk.git#0e57a6d510ce99d1f491ead15eededd4426fb804"
+source = "git+https://github.com/numas13/xash3d-sdk.git#93bea19f82b45818d3e1c60c41c6cb0c6fd897d6"
 
 [[package]]
 name = "xash3d-maintui"
@@ -444,7 +444,7 @@ dependencies = [
 [[package]]
 name = "xash3d-shared"
 version = "0.1.0"
-source = "git+https://github.com/numas13/xash3d-sdk.git#0e57a6d510ce99d1f491ead15eededd4426fb804"
+source = "git+https://github.com/numas13/xash3d-sdk.git#93bea19f82b45818d3e1c60c41c6cb0c6fd897d6"
 dependencies = [
  "bitflags",
  "csz",
@@ -456,7 +456,7 @@ dependencies = [
 [[package]]
 name = "xash3d-ui"
 version = "0.1.0"
-source = "git+https://github.com/numas13/xash3d-sdk.git#0e57a6d510ce99d1f491ead15eededd4426fb804"
+source = "git+https://github.com/numas13/xash3d-sdk.git#93bea19f82b45818d3e1c60c41c6cb0c6fd897d6"
 dependencies = [
  "bitflags",
  "csz",

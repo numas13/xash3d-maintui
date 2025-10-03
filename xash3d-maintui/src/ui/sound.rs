@@ -1,5 +1,6 @@
 use res::valve::sound;
-use xash3d_ui::prelude::*;
+
+use crate::prelude::*;
 
 pub fn select_changed() {
     engine().play_sound(sound::common::LAUNCH_GLOW1);

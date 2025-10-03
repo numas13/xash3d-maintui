@@ -5,11 +5,12 @@ use compact_str::{CompactString, ToCompactString};
 use csz::CStrThin;
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
-use xash3d_ui::{color::RGBA, prelude::*};
+use xash3d_ui::color::RGBA;
 
 use crate::{
     input::{Key, KeyEvent},
     menu::define_menu_items,
+    prelude::*,
     ui::{sound, utils, Control, Menu, Screen, State},
     widgets::{ConfirmPopup, ConfirmResult, List, ListPopup, SelectResult, WidgetMut},
 };

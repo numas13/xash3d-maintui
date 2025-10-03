@@ -6,9 +6,8 @@ use ratatui::{
     widgets::{Block, Borders, ListState, Paragraph, TableState, Wrap},
 };
 use unicode_width::UnicodeWidthStr;
-use xash3d_ui::prelude::*;
 
-use crate::strings;
+use crate::{prelude::*, strings};
 
 pub fn is_wide(area: Rect) -> bool {
     area.width >= 80

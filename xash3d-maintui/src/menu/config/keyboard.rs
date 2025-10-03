@@ -10,13 +10,11 @@ use ratatui::{
     widgets::{Block, Borders, Cell, Paragraph, Row, Table},
 };
 use xash3d_ratatui::XashBackend;
-use xash3d_ui::{
-    parser::{TokenError, Tokens},
-    prelude::*,
-};
+use xash3d_ui::parser::{TokenError, Tokens};
 
 use crate::{
     input::{Key, KeyEvent},
+    prelude::*,
     strings::Localize,
     ui::{sound, utils, Control, Menu, Screen, State},
     widgets::{List, MyTable, SelectResult, WidgetMut},

@@ -11,12 +11,17 @@ use alloc::{boxed::Box, vec::Vec};
 use csz::CStrThin;
 use ratatui::prelude::*;
 use xash3d_ratatui::{XashBackend, XashTerminal};
-use xash3d_ui::{color::RGBA, engine::net::netadr_s, export::UnsyncGlobal, prelude::*, ActiveMenu};
+use xash3d_ui::{
+    color::RGBA,
+    engine::{net::netadr_s, ActiveMenu},
+    export::UnsyncGlobal,
+};
 
 use crate::{
-    export::Instance,
+    export::Dll,
     i18n,
     input::{Key, KeyEvent, Modifier},
+    prelude::*,
     strings::{self, Localize},
     widgets::{ConfirmPopup, ConfirmResult, WidgetMut},
 };
@@ -86,6 +91,7 @@ enum Focus {
 }
 
 pub struct Ui {
+    engine: UiEngineRef,
     terminal: XashTerminal,
     history: Vec<Box<dyn Menu>>,
     active: bool,
@@ -98,21 +104,22 @@ pub struct Ui {
     quit_popup: Option<ConfirmPopup>,
 }
 
-impl Default for Ui {
-    fn default() -> Self {
+impl Ui {
+    pub fn new(engine: UiEngineRef) -> Self {
         strings::init();
 
         // TODO: helper macro
         unsafe extern "C" fn cmd_fg() {
-            unsafe { Instance::global_assume_init_ref() }
+            unsafe { Dll::global_assume_init_ref() }
                 .ui_mut()
                 .activate_console(false);
         }
-        engine().add_command(c"fg", cmd_fg).unwrap();
+        engine.add_command(c"fg", cmd_fg).unwrap();
 
         Self {
+            engine,
             history: vec![],
-            terminal: XashTerminal::default(),
+            terminal: XashTerminal::new(engine),
             active: false,
             grab_input: false,
             modifier: Modifier::default(),
@@ -123,13 +130,11 @@ impl Default for Ui {
             quit_popup: None,
         }
     }
-}
 
-impl Ui {
     pub fn vid_init(&mut self) -> bool {
-        let globals = globals();
-        let width = globals.screen_width() as u16;
-        let height = globals.screen_height() as u16;
+        let globals = &self.engine.globals;
+        let width = globals.screen_width();
+        let height = globals.screen_height();
         self.terminal.resize(width, height);
         true
     }
@@ -137,9 +142,9 @@ impl Ui {
     fn activate_console(&mut self, active: bool) {
         self.active = !active;
         if active {
-            engine().set_key_dest(ActiveMenu::Console);
+            self.engine.set_key_dest(ActiveMenu::Console);
         } else {
-            engine().set_key_dest(ActiveMenu::Menu);
+            self.engine.set_key_dest(ActiveMenu::Menu);
         }
     }
 
@@ -159,7 +164,7 @@ impl Ui {
         while let Some(mut i) = self.history.pop() {
             i.on_menu_hide();
         }
-        engine().client_cmd(c"quit");
+        self.engine.client_cmd(c"quit");
     }
 
     fn back_main(&mut self) {
@@ -175,13 +180,13 @@ impl Ui {
 
         self.active = active;
         if active {
-            engine().set_key_dest(ActiveMenu::Menu);
+            self.engine.set_key_dest(ActiveMenu::Menu);
             sound::switch_menu();
         } else {
             if let Some(menu) = self.history.last_mut() {
                 menu.on_menu_hide();
             }
-            engine().set_key_dest(ActiveMenu::Game);
+            self.engine.set_key_dest(ActiveMenu::Game);
         }
     }
 
@@ -354,7 +359,7 @@ impl Ui {
                 if key == Key::Mouse(0) {
                     let backend = self.terminal.backend();
                     if event.is_down() {
-                        self.touch_start = globals().system_time_f32();
+                        self.touch_start = self.engine.globals.system_time_f32();
                         self.touch = Touch::Start(backend.cursor_position_in_pixels());
                         self.emulated_wheel = Some(backend.cursor_position());
                         return;
@@ -362,7 +367,7 @@ impl Ui {
                         let is_touch_active = self.touch.is_active();
                         self.touch = Touch::Stop;
                         self.emulated_wheel = None;
-                        if globals().system_time_f32() - self.touch_start >= 0.2 {
+                        if self.engine.globals.system_time_f32() - self.touch_start >= 0.2 {
                             if is_touch_active {
                                 let key = Key::TouchStop(backend.cursor_position_in_pixels());
                                 let event = KeyEvent::new_touch(self.modifier, key);
@@ -376,7 +381,7 @@ impl Ui {
                 }
 
                 // pressing escape in the main menu returns back to the game
-                if key == Key::Escape && self.history.len() == 1 && engine().client_in_game() {
+                if key == Key::Escape && self.history.len() == 1 && self.engine.client_in_game() {
                     self.set_active_menu(false);
                     return;
                 }

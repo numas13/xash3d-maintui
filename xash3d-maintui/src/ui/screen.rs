@@ -2,7 +2,9 @@ use core::ffi::c_int;
 
 use ratatui::layout::{Position, Rect, Size};
 use xash3d_ratatui::XashBackend;
-use xash3d_ui::{color::RGBA, ffi::common::wrect_s, prelude::*};
+use xash3d_ui::{color::RGBA, misc::Rect as UiRect, picture::Picture};
+
+use crate::prelude::*;
 
 pub struct Screen {
     /// Cell size in pixels.
@@ -18,43 +20,44 @@ impl Screen {
         }
     }
 
-    pub fn draw_picture(&self, area: Rect, pic: c_int, colors: &[RGBA]) {
+    pub fn draw_picture(&self, area: Rect, pic: Picture, colors: &[RGBA]) {
         let engine = engine();
-        let mut x = (area.x * self.cell.width) as c_int;
-        let mut y = (area.y * self.cell.height) as c_int;
-        let mut w = (area.width * self.cell.width) as c_int;
-        let mut h = (area.height * self.cell.height) as c_int;
-        engine.fill_rgba((x, y), (w, h), RGBA::BLACK);
+        let mut x = (area.x * self.cell.width) as i32;
+        let mut y = (area.y * self.cell.height) as i32;
+        let mut w = (area.width * self.cell.width) as u32;
+        let mut h = (area.height * self.cell.height) as u32;
+        let area = UiRect::new(x, y, w, h);
+        engine.fill_rgba(RGBA::BLACK, area);
 
-        let size = engine.pic_size(pic);
+        let size = pic.size();
         let r = size.width as f32 / size.height as f32;
         if (w as f32 / h as f32) < r {
-            let t = (w as f32 / r) as c_int;
-            y += (h - t) / 2;
+            let t = (w as f32 / r) as u32;
+            y += ((h - t) / 2) as i32;
             h = t;
         } else {
-            let t = (h as f32 * r) as c_int;
-            x += (w - t) / 2;
+            let t = (h as f32 * r) as u32;
+            x += ((w - t) / 2) as i32;
             w = t;
         }
         if colors.is_empty() {
-            engine.pic_set(pic, RGBA::WHITE);
-            engine.pic_draw((x, y), (w, h), None);
+            let area = UiRect::new(x, y, w, h);
+            pic.draw(RGBA::WHITE, area, None);
         } else {
             let len = colors.len() as f64;
             let y_step = h as f64 / len;
             let r_step = size.height as f64 / len;
             for (i, color) in colors.iter().enumerate() {
                 let i = i as f64;
-                let rect = wrect_s {
-                    left: 0,
-                    right: size.width,
-                    top: (i * r_step).round() as c_int,
-                    bottom: ((i + 1.0) * r_step).round() as c_int,
-                };
+                let pic_area = UiRect::new(
+                    0,
+                    (i * r_step).round() as i32,
+                    size.width,
+                    ((i + 1.0) * r_step).round() as u32,
+                );
                 let y = y + (i * y_step).round() as c_int;
-                engine.pic_set(pic, *color);
-                engine.pic_draw((x, y), (w, y_step as c_int), Some(&rect));
+                let area = UiRect::new(x, y, w, y_step as u32);
+                pic.draw(*color, area, Some(pic_area));
             }
         }
     }

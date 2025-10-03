@@ -1,6 +1,6 @@
 use core::ffi::CStr;
 
-use xash3d_ui::prelude::*;
+use crate::prelude::*;
 
 pub trait ConfigBackend<V> {
     fn is_enabled(&self) -> bool {

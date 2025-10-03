@@ -1,14 +1,21 @@
 use ratatui::{buffer::Buffer, layout::Rect};
+use xash3d_ui::prelude::*;
 
 use crate::XashBackend;
 
-#[derive(Default)]
 pub struct XashTerminal {
     backend: XashBackend,
     buffer: Buffer,
 }
 
 impl XashTerminal {
+    pub fn new(engine: UiEngineRef) -> Self {
+        Self {
+            backend: XashBackend::new(engine),
+            buffer: Buffer::default(),
+        }
+    }
+
     pub fn backend(&self) -> &XashBackend {
         &self.backend
     }
@@ -17,7 +24,7 @@ impl XashTerminal {
         &mut self.backend
     }
 
-    pub fn resize(&mut self, width: u16, height: u16) {
+    pub fn resize(&mut self, width: u32, height: u32) {
         self.backend.resize(width, height);
         self.buffer.resize(self.backend.area());
     }

@@ -1,8 +1,5 @@
-use core::ffi::CStr;
-
 use alloc::vec::Vec;
 use log::Level::Trace;
-use xash3d_ui::picture::Picture;
 
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -122,11 +119,5 @@ impl Bmp {
             Components::RGB => self.write_array(offset, &[r, g, b]),
             Components::RGBA => self.write_array(offset, &[r, g, b, a]),
         }
-    }
-
-    pub fn create_picture<S: AsRef<CStr>>(&self, path: S) -> Picture<S> {
-        // TODO: return Result
-        assert!(path.as_ref().to_bytes().ends_with(b".bmp"));
-        Picture::create(path, self.as_slice()).unwrap()
     }
 }

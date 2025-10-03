@@ -59,15 +59,17 @@ impl GlyphInfo {
 }
 
 struct GlyphMap {
+    engine: UiEngineRef,
     start: u32,
-    pic: Picture<CString>,
+    pic: Picture,
+    path: CString,
     slots: Box<[GlyphInfo; Self::SIZE]>,
 }
 
 impl GlyphMap {
     const SIZE: usize = 256;
 
-    fn new(font: &Font, start: u32) -> Self {
+    fn new(engine: UiEngineRef, font: &Font, start: u32) -> Self {
         let (gw, gh) = font.glyph_size();
         let font = &font.font;
         let mut slots = Box::new([GlyphInfo::default(); Self::SIZE]);
@@ -132,8 +134,15 @@ impl GlyphMap {
             std::fs::write(path, bmp.as_slice()).unwrap();
         }
 
-        let pic = bmp.create_picture(CString::new(path).unwrap());
-        Self { start, pic, slots }
+        let path = CString::new(path).unwrap();
+        let pic = engine.pic_create(&path, bmp.as_slice()).unwrap();
+        Self {
+            engine,
+            start,
+            pic,
+            path,
+            slots,
+        }
     }
 
     fn get(&self, i: usize) -> &GlyphInfo {
@@ -143,20 +152,20 @@ impl GlyphMap {
 
 impl Drop for GlyphMap {
     fn drop(&mut self) {
-        // FIXME: RAII for pictures are disabled globally because the engine uses one global
-        // id for all pictures with same path. Required manual free.
-        engine().pic_free(self.pic.path());
+        self.engine.pic_free(&self.path);
     }
 }
 
 pub struct FontMap {
+    engine: UiEngineRef,
     font: Font,
     map: Vec<GlyphMap>,
 }
 
 impl FontMap {
-    pub fn new(font: Font) -> Self {
+    pub fn new(engine: UiEngineRef, font: Font) -> Self {
         Self {
+            engine,
             font,
             map: Default::default(),
         }
@@ -170,17 +179,17 @@ impl FontMap {
         self.font.glyph_size()
     }
 
-    pub fn get(&mut self, c: char, _: Modifier) -> (&Picture<CString>, &GlyphInfo) {
+    pub fn get(&mut self, c: char, _: Modifier) -> (Picture, &GlyphInfo) {
         let start = c as u32 & !(GlyphMap::SIZE as u32 - 1);
         let index = match self.map.binary_search_by_key(&start, |i| i.start) {
             Ok(index) => index,
             Err(index) => {
-                let info = GlyphMap::new(&self.font, start);
+                let info = GlyphMap::new(self.engine, &self.font, start);
                 self.map.insert(index, info);
                 index
             }
         };
         let info = &self.map[index];
-        (&info.pic, info.get(c as usize & (GlyphMap::SIZE - 1)))
+        (info.pic, info.get(c as usize & (GlyphMap::SIZE - 1)))
     }
 }

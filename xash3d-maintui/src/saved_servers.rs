@@ -4,8 +4,9 @@ use alloc::{string::String, vec::Vec};
 use xash3d_ui::{
     engine::{net::netadr_s, Protocol},
     parser::Tokens,
-    prelude::*,
 };
+
+use crate::prelude::*;
 
 pub struct SavedServer {
     addr: netadr_s,

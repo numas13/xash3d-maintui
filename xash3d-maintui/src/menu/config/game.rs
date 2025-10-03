@@ -1,10 +1,10 @@
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
-use xash3d_ui::prelude::*;
 
 use crate::{
     config_list::ConfigList,
     input::KeyEvent,
+    prelude::*,
     strings::Localize,
     ui::{Control, Menu, Screen},
 };
@@ -21,8 +21,9 @@ impl GameConfig {
     pub fn new() -> Self {
         let mut list = ConfigList::with_back(i18n::TITLE.localize());
 
-        let info = engine().get_game_info_2().unwrap();
-        if info.gamefolder().as_c_str() == c"cstrike" {
+        let engine = engine();
+        let info = engine.game_info2().unwrap();
+        if info.game_dir() == c"cstrike" {
             list.slider(i18n::WEAPON_LAG.localize(), c"cl_weaponlag");
         }
 

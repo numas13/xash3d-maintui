@@ -2,14 +2,15 @@ use core::{char, ffi::CStr, fmt::Write, str};
 
 use alloc::{borrow::Cow, string::String};
 use compact_str::CompactString;
-use csz::CStrArray;
+use csz::{CStrArray, CStrThin};
 use hashbrown::HashMap;
 use xash3d_ui::{
     cell::SyncOnceCell,
     cvar::CVarFlags,
     parser::{TokenError, Tokens},
-    prelude::*,
 };
+
+use crate::prelude::*;
 
 const DEFAULT_LANGUAGE: &str = "english";
 const CUSTOM_STRINGS_PATH: &CStr = c"gfx/shell/strings.lst";
@@ -47,18 +48,19 @@ impl Strings {
 
     fn load_language(&mut self, lang: &str) {
         trace!("load strings for language \"{lang}\"");
-        let info = engine().get_game_info_2().unwrap();
-        let gamedir = info.gamefolder().as_c_str().to_str().unwrap();
-        for i in ["gameui", "valve", "mainui", "maintui"] {
+        let engine = engine();
+        let info = engine.game_info2().unwrap();
+        let gamedir = info.game_dir();
+        for i in [c"gameui", c"valve", c"mainui", c"maintui"] {
             if i != gamedir {
-                self.load_gamedir(i, lang);
+                self.load_gamedir(i.into(), lang);
             }
         }
 
         self.load_gamedir(gamedir, lang);
     }
 
-    fn load_gamedir(&mut self, gamedir: &str, lang: &str) {
+    fn load_gamedir(&mut self, gamedir: &CStrThin, lang: &str) {
         let engine = engine();
         let mut path = CStrArray::<128>::new();
         path.cursor()

@@ -8,19 +8,17 @@ use xash3d_ui::{
     color::RGBA,
     engine::net::netadr_s,
     export::{export_dll, impl_unsync_global, UiDll},
-    prelude::*,
 };
 
-use crate::ui::Ui;
+use crate::{prelude::*, ui::Ui};
 
-#[derive(Default)]
-pub struct Instance {
+pub struct Dll {
     ui: RefCell<Ui>,
 }
 
-impl_unsync_global!(Instance);
+impl_unsync_global!(Dll);
 
-impl Instance {
+impl Dll {
     pub fn ui_ref(&self) -> Ref<'_, Ui> {
         self.ui.borrow()
     }
@@ -30,7 +28,13 @@ impl Instance {
     }
 }
 
-impl UiDll for Instance {
+impl UiDll for Dll {
+    fn new(engine: UiEngineRef) -> Self {
+        Self {
+            ui: Ui::new(engine).into(),
+        }
+    }
+
     fn vid_init(&self) -> bool {
         self.ui_mut().vid_init()
     }
@@ -78,7 +82,7 @@ impl UiDll for Instance {
     }
 }
 
-export_dll!(Instance, pre {
+export_dll!(Dll, pre {
     #[cfg(feature = "std")]
     std::panic::set_hook(alloc::boxed::Box::new(|info| {
         use alloc::string::String;

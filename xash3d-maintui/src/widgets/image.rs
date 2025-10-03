@@ -1,6 +1,6 @@
 use ratatui::prelude::*;
 use xash3d_ratatui::XashBackend;
-use xash3d_ui::{color::RGBA, ffi::menu::HIMAGE};
+use xash3d_ui::{color::RGBA, picture::Picture};
 
 use crate::{
     input::{Key, KeyEvent},
@@ -9,17 +9,17 @@ use crate::{
 };
 
 pub struct Image<'a> {
-    picture: HIMAGE,
+    pic: Picture,
     colors: &'a [RGBA],
 }
 
 impl<'a> Image<'a> {
-    pub fn with_color(picture: HIMAGE, colors: &'a [RGBA]) -> Self {
-        Self { picture, colors }
+    pub fn with_color(pic: Picture, colors: &'a [RGBA]) -> Self {
+        Self { pic, colors }
     }
 
-    pub fn new(picture: HIMAGE) -> Self {
-        Self::with_color(picture, &[])
+    pub fn new(pic: Picture) -> Self {
+        Self::with_color(pic, &[])
     }
 }
 
@@ -28,10 +28,9 @@ impl WidgetMut<ConfirmResult> for Image<'_> {
         for pos in area.positions() {
             buf[pos].reset();
         }
-        if self.picture == 0 {
-            return;
+        if !self.pic.is_none() {
+            screen.draw_picture(area, self.pic, self.colors);
         }
-        screen.draw_picture(area, self.picture, self.colors);
     }
 
     fn key_event(&mut self, _: &XashBackend, event: KeyEvent) -> ConfirmResult {

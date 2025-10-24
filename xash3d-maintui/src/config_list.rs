@@ -112,13 +112,13 @@ impl ConfigList {
         self.add(ConfigEntry::checkbox().label(label).build_for_cvar(cvar));
     }
 
-    pub fn popup_list<T>(&mut self, label: &'static str, cvar: &'static CStr, list: T)
-    where
-        T: IntoIterator,
-        T::Item: ToCompactString,
-    {
-        self.add(ConfigEntry::list(label, list).build_for_cvar(cvar));
-    }
+    // pub fn popup_list<T>(&mut self, label: &'static str, cvar: &'static CStr, list: T)
+    // where
+    //     T: IntoIterator,
+    //     T::Item: ToCompactString,
+    // {
+    //     self.add(ConfigEntry::list(label, list).build_for_cvar(cvar));
+    // }
 
     // pub fn button<F: FnMut() -> Control + 'static>(&mut self, label: impl ToString, func: F) {
     //     self.add(Button::new(label, func))

@@ -11,8 +11,8 @@ exclude = [
 [workspace.package]
 license = "LGPL-3.0-only"
 authors = ["Denis Drakhnia <numas13@gmail.com>"]
-edition = "2021"
-rust-version = "1.79"
+edition = "2024"
+rust-version = "1.86"
 
 [workspace.dependencies]
 log = "0.4"

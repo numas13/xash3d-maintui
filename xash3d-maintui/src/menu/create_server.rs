@@ -181,7 +181,7 @@ impl CreateServer {
         engine.client_cmd(buf.as_thin());
     }
 
-    fn start_button(self: &Rc<Self>) -> impl ConfigItem {
+    fn start_button(self: &Rc<Self>) -> impl ConfigItem + use<> {
         let create_server = self.clone();
         Button::new(i18n::START_BUTTON.localize(), move || {
             create_server.start();
@@ -189,7 +189,7 @@ impl CreateServer {
         })
     }
 
-    fn server_name_field(self: &Rc<Self>) -> impl ConfigItem {
+    fn server_name_field(self: &Rc<Self>) -> impl ConfigItem + use<> {
         struct ServerName(Rc<CreateServer>);
         impl ConfigBackend<CompactString> for ServerName {
             fn read(&self) -> Option<CompactString> {
@@ -205,7 +205,7 @@ impl CreateServer {
             .build(ServerName(self.clone()))
     }
 
-    fn password_field(self: &Rc<Self>) -> impl ConfigItem {
+    fn password_field(self: &Rc<Self>) -> impl ConfigItem + use<> {
         struct Password(Rc<CreateServer>);
         impl ConfigBackend<CompactString> for Password {
             fn read(&self) -> Option<CompactString> {
@@ -222,7 +222,7 @@ impl CreateServer {
             .build(Password(self.clone()))
     }
 
-    fn map_list(self: &Rc<Self>) -> impl ConfigItem {
+    fn map_list(self: &Rc<Self>) -> impl ConfigItem + use<> {
         struct MapList(Rc<CreateServer>);
         impl ConfigBackend<usize> for MapList {
             fn read(&self) -> Option<usize> {
@@ -239,7 +239,7 @@ impl CreateServer {
         ConfigEntry::builder(widget).build(MapList(self.clone()))
     }
 
-    fn nat_checkbox(self: &Rc<Self>) -> impl ConfigItem {
+    fn nat_checkbox(self: &Rc<Self>) -> impl ConfigItem + use<> {
         struct B(Rc<CreateServer>);
         impl ConfigBackend<bool> for B {
             fn read(&self) -> Option<bool> {
@@ -256,7 +256,7 @@ impl CreateServer {
             .build(B(self.clone()))
     }
 
-    fn max_players_field(self: &Rc<Self>) -> impl ConfigItem {
+    fn max_players_field(self: &Rc<Self>) -> impl ConfigItem + use<> {
         struct B(Rc<CreateServer>);
         impl ConfigBackend<usize> for B {
             fn read(&self) -> Option<usize> {

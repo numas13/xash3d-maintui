@@ -59,7 +59,7 @@ impl ConfigBackend<bool> for MouseLook {
         Some(
             engine()
                 .key_get_state(c"in_mlook")
-                .map_or(true, |i| i.is_down()),
+                .is_none_or(|i| i.is_down()),
         )
     }
 

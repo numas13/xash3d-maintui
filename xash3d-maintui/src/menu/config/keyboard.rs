@@ -98,7 +98,7 @@ impl Controls {
 
     fn load_file(path: &CStr, mut f: impl FnMut(&str, &str)) {
         let file = engine().load_file(path).unwrap();
-        let Ok(data) = str::from_utf8(file.as_slice()) else {
+        let Ok(data) = str::from_utf8(file.as_bytes()) else {
             error!("file does not contain a valid UTF-8 data, {path:?}");
             return;
         };

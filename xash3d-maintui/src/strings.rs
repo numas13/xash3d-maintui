@@ -30,7 +30,7 @@ impl Strings {
     }
 
     fn load(&mut self) {
-        if let Some(_file) = engine().load_file(CUSTOM_STRINGS_PATH) {
+        if let Ok(_file) = engine().load_file(CUSTOM_STRINGS_PATH) {
             warn!("unimplemented {CUSTOM_STRINGS_PATH:?}");
         }
 
@@ -67,12 +67,12 @@ impl Strings {
             .write_fmt(format_args!("resource/{gamedir}_{lang}.txt"))
             .unwrap();
 
-        let Some(file) = engine.load_file(&path) else {
+        let Ok(file) = engine.load_file(&path) else {
             error!("failed to open {path}");
             return;
         };
 
-        let src = bytes_to_string(file.as_slice());
+        let src = bytes_to_string(file.as_bytes());
         if let Err(err) = self.parse_resource_file(&src) {
             error!("failed to parse {path}, {err:?}");
         }

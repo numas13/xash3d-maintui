@@ -22,7 +22,7 @@ hashbrown = "0.15"
 ratatui = { version = "0.29", default-features = false, features = ["unstable-widget-ref"] }
 csz = { version = "0.3.0", features = ["alloc"] }
 res = { git = "https://github.com/numas13/xash3d-sdk.git", package = "xash3d-hl-resources" }
-xash3d-ui = { git = "https://github.com/numas13/xash3d-sdk.git" }
+xash3d-ui = { git = "https://github.com/numas13/xash3d-sdk.git", features = ["std"] }
 
 [profile.release]
 panic = "abort"

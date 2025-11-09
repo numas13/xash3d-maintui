@@ -36,8 +36,8 @@ pub struct SavedServers {
 impl SavedServers {
     pub fn load_from_file(path: &str) -> Result<Self, &'static str> {
         let engine = engine();
-        let file = engine.load_file(path).ok_or("failed to load")?;
-        let data = str::from_utf8(file.as_slice()).map_err(|_| "invalid utf8")?;
+        let file = engine.load_file(path).map_err(|_| "failed to load")?;
+        let data = file.as_str().map_err(|_| "invalid utf8")?;
         let mut tokens = Tokens::new(data).handle_colon(false);
         let mut servers = Self::default();
         while let Some((Ok(addr_raw), Ok(protocol))) = tokens.next().zip(tokens.next()) {

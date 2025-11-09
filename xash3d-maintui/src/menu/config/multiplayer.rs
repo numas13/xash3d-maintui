@@ -355,14 +355,14 @@ impl Model {
     fn rotate(&self, yaw: f32) {
         let ent = engine().get_player_model_raw();
         if let Some(ent) = unsafe { ent.as_mut() } {
-            let mut yaw = ent.angles.yaw() + yaw * 30.0;
+            let mut yaw = ent.angles[1] + yaw * 30.0;
             if yaw >= 180.0 {
                 yaw -= 360.0;
             } else if yaw <= -180.0 {
                 yaw += 360.0;
             }
-            ent.angles.set_yaw(yaw);
-            ent.curstate.angles.set_yaw(yaw);
+            ent.angles[1] = yaw;
+            ent.curstate.angles[1] = yaw;
         }
     }
 
@@ -455,8 +455,8 @@ impl Model {
                 .pos(pos.x, pos.y)
                 .build(size.width as i32, size.height as i32);
             let x = 45.0 / (viewpass.fov_y() / 2.0).to_radians().tan();
-            ent.origin.set_x(x);
-            ent.curstate.origin.set_x(x);
+            ent.origin.x = x;
+            ent.curstate.origin.x = x;
             engine.clear_scene();
             engine.create_visible_entity_raw(ent, EntityType::Normal);
             engine.render_scene(viewpass);

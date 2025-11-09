@@ -66,12 +66,12 @@ fn get_map_list() -> Option<Vec<Map>> {
     if !engine.create_maps_list(true) {
         return None;
     }
-    let Some(file) = engine.load_file(c"maps.lst") else {
+    let Ok(file) = engine.load_file(c"maps.lst") else {
         error!("failed to load maps.lst");
         return None;
     };
     // XXX: lossy because maps.lst can be encoded in any combination of encodings.
-    let content = String::from_utf8_lossy(file.as_slice());
+    let content = String::from_utf8_lossy(file.as_bytes());
     match parse_map_list(&content) {
         Ok(list) => Some(list),
         Err(e) => {

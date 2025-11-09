@@ -9,7 +9,7 @@ use xash3d_ratatui::XashBackend;
 
 use crate::{
     input::KeyEvent,
-    ui::{utils, Screen},
+    ui::{Screen, utils},
     widgets::{List, SelectResult, Value, WidgetMut},
 };
 

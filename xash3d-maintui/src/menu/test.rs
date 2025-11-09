@@ -3,7 +3,7 @@ use xash3d_ratatui::XashBackend;
 
 use crate::{
     input::KeyEvent,
-    ui::{utils, Control, Menu, Screen, State},
+    ui::{Control, Menu, Screen, State, utils},
     widgets::{ConfirmResult, Input, List, WidgetMut},
 };
 

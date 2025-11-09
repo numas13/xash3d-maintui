@@ -1,5 +1,5 @@
 use core::{
-    ffi::{c_uint, CStr},
+    ffi::{CStr, c_uint},
     fmt::Write,
 };
 

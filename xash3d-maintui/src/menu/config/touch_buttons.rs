@@ -11,7 +11,7 @@ use crate::{
     input::{Key, KeyEvent},
     menu::define_menu_items,
     prelude::*,
-    ui::{sound, utils, Control, Menu, Screen, State},
+    ui::{Control, Menu, Screen, State, sound, utils},
     widgets::{ConfirmPopup, ConfirmResult, List, ListPopup, SelectResult, WidgetMut},
 };
 

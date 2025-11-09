@@ -11,7 +11,7 @@ use xash3d_ratatui::XashBackend;
 use crate::{
     input::{Key, KeyEvent},
     strings::strings,
-    ui::{sound, symbols, utils::Scroll, Screen},
+    ui::{Screen, sound, symbols, utils::Scroll},
     widgets::{Scrollbar, SelectResult, WidgetMut},
 };
 

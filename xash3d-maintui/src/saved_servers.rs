@@ -2,7 +2,7 @@ use core::{fmt::Write, str};
 
 use alloc::{string::String, vec::Vec};
 use xash3d_ui::{
-    engine::{net::netadr_s, Protocol},
+    engine::{Protocol, net::netadr_s},
     parser::Tokens,
 };
 

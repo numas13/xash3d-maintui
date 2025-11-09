@@ -1,6 +1,6 @@
 use core::{
     cell::{Cell, RefCell},
-    ffi::{c_int, CStr},
+    ffi::{CStr, c_int},
     fmt::Write,
     mem,
 };
@@ -13,7 +13,7 @@ use xash3d_ratatui::XashBackend;
 use xash3d_ui::{
     color::RGBA,
     entity::EntityType,
-    ffi::common::{kRenderNormal, vec3_t, EF_FULLBRIGHT},
+    ffi::common::{EF_FULLBRIGHT, kRenderNormal, vec3_t},
     misc::{Point as UiPoint, Rect as UiRect, Size as UiSize},
     picture::{Picture, PictureFlags},
     prelude::*,
@@ -26,8 +26,8 @@ use crate::{
     prelude::*,
     strings::Localize,
     ui::{
-        utils::{self, is_wide},
         Control, Menu, Screen,
+        utils::{self, is_wide},
     },
     widgets::{Image, Slider, WidgetMut},
 };

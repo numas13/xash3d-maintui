@@ -1,4 +1,4 @@
-use core::ffi::{c_int, CStr};
+use core::ffi::{CStr, c_int};
 
 use alloc::vec::Vec;
 use compact_str::{CompactString, ToCompactString};
@@ -11,7 +11,7 @@ use crate::{
     menu::{self, define_menu_items},
     prelude::*,
     strings::Localize,
-    ui::{utils, Control, Menu, Screen, State},
+    ui::{Control, Menu, Screen, State, utils},
     widgets::{ConfirmPopup, ConfirmResult, List, ListPopup, SelectResult, WidgetMut},
 };
 

@@ -9,7 +9,7 @@ use xash3d_ui::cvar::{GetCvar, SetCvar};
 
 use crate::{
     input::{Key, KeyEvent},
-    ui::{sound, Screen},
+    ui::{Screen, sound},
     widgets::{Checkbox, ConfirmResult, Input, ListPopup, SelectResult, Slider, Value, WidgetMut},
 };
 

@@ -15,7 +15,7 @@ use xash3d_ratatui::XashBackend;
 use crate::{
     input::{Key, KeyEvent},
     menu::define_menu_items,
-    ui::{utils, Control, Menu, Screen},
+    ui::{Control, Menu, Screen, utils},
     widgets::{List, WidgetMut},
 };
 

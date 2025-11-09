@@ -10,7 +10,7 @@ use crate::{
     input::KeyEvent,
     prelude::*,
     strings::Localize,
-    ui::{utils, Control, Menu, Screen, State},
+    ui::{Control, Menu, Screen, State, utils},
     widgets::{ConfirmPopup, ConfirmResult, List, MyTable, SelectResult, WidgetMut},
 };
 

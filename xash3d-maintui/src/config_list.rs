@@ -14,9 +14,8 @@ use xash3d_ratatui::XashBackend;
 use crate::{
     input::{Key, KeyEvent},
     ui::{
-        symbols,
+        Control, Screen, State, symbols,
         utils::{self, Scroll},
-        Control, Screen, State,
     },
     widgets::{ListState, Scrollbar},
 };

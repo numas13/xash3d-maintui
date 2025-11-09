@@ -7,7 +7,7 @@ use csz::CStrThin;
 use xash3d_ui::{
     color::RGBA,
     engine::net::netadr_s,
-    export::{export_dll, impl_unsync_global, UiDll},
+    export::{UiDll, export_dll, impl_unsync_global},
 };
 
 use crate::{prelude::*, ui::Ui};

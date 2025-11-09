@@ -1,6 +1,6 @@
 use compact_str::{CompactString, ToCompactString};
 use xash3d_protocol::color::trim_color;
-use xash3d_ui::engine::{net::netadr_s, Protocol};
+use xash3d_ui::engine::{Protocol, net::netadr_s};
 
 #[derive(Clone)]
 pub struct ServerInfo {

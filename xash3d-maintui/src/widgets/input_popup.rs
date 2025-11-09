@@ -5,7 +5,7 @@ use xash3d_ratatui::XashBackend;
 use crate::{
     input::{Key, KeyEvent},
     strings::Localize,
-    ui::{utils, Screen, State},
+    ui::{Screen, State, utils},
     widgets::{Button, ConfirmResult, Input, InputResult, WidgetMut},
 };
 
@@ -96,7 +96,7 @@ impl WidgetMut<InputResult> for InputPopup {
                     return match self.state.focus() {
                         Focus::Yes => InputResult::Ok(self.input.value().into()),
                         Focus::Cancel => InputResult::Cancel,
-                    }
+                    };
                 }
                 ConfirmResult::Cancel => return InputResult::Cancel,
                 _ => {}

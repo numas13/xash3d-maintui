@@ -225,11 +225,7 @@ pub fn file_stem(path: &str) -> Option<&str> {
 pub fn file_extension(path: &str) -> Option<&str> {
     let file_name = file_name(path)?;
     let (stem, ext) = file_name.rsplit_once('.')?;
-    if stem.is_empty() {
-        None
-    } else {
-        Some(ext)
-    }
+    if stem.is_empty() { None } else { Some(ext) }
 }
 
 #[cfg(test)]

@@ -17,7 +17,7 @@ use crate::{
     input::{Key, KeyEvent},
     prelude::*,
     strings::Localize,
-    ui::{sound, utils, Control, Menu, Screen, State},
+    ui::{Control, Menu, Screen, State, sound, utils},
     widgets::{
         ConfirmPopup, ConfirmResult, Image, List, ListPopup, MyTable, SelectResult, WidgetMut,
     },

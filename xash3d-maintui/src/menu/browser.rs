@@ -12,7 +12,7 @@ use ratatui::{
 };
 use xash3d_protocol::{self as xash3d, color::Color as XashColor};
 use xash3d_ratatui::XashBackend;
-use xash3d_ui::engine::{net::netadr_s, Protocol};
+use xash3d_ui::engine::{Protocol, net::netadr_s};
 
 use crate::{
     input::{Key, KeyEvent},
@@ -20,7 +20,7 @@ use crate::{
     saved_servers::{SavedServer, SavedServers},
     server_info::ServerInfo,
     strings::{self, Localize},
-    ui::{utils, Control, Menu, Screen, State},
+    ui::{Control, Menu, Screen, State, utils},
     widgets::{InputPopup, InputResult, List, ListPopup, MyTable, SelectResult, WidgetMut},
 };
 

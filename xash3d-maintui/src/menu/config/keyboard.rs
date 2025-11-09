@@ -1,5 +1,5 @@
 use core::{
-    ffi::{c_int, CStr},
+    ffi::{CStr, c_int},
     str,
 };
 
@@ -16,7 +16,7 @@ use crate::{
     input::{Key, KeyEvent},
     prelude::*,
     strings::Localize,
-    ui::{sound, utils, Control, Menu, Screen, State},
+    ui::{Control, Menu, Screen, State, sound, utils},
     widgets::{List, MyTable, SelectResult, WidgetMut},
 };
 
